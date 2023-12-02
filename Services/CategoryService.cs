@@ -1,4 +1,5 @@
 ﻿using Retetar.Interfaces;
+using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
 
@@ -11,25 +12,6 @@ namespace Retetar.Services
         public CategoryService(RecipeDbContext dbContext)
         {
             _dbContext = dbContext;
-        }
-
-        /// <summary>
-        /// Retrieves all Categorys from the database.
-        /// </summary>
-        /// <returns>
-        /// Returns a list of all Categorys if successful.
-        /// If an error occurs during processing, throws an exception with an error message.
-        /// </returns>
-        public List<Category> GetAllCategorys()
-        {
-            try
-            {
-                return _dbContext.Category.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
         }
 
         /// <summary>
@@ -47,7 +29,7 @@ namespace Retetar.Services
                 IQueryable<Category> query = _dbContext.Category.AsQueryable();
 
                 // Apply search filters
-                if (!string.IsNullOrEmpty(options.SearchTerm))
+                if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
                     query = query.Where(g =>
@@ -113,12 +95,12 @@ namespace Retetar.Services
         {
             try
             {
-                var Category = _dbContext.Category.FirstOrDefault(g => g.Id == id);
-                if (Category == null)
+                var category = _dbContext.Category.FirstOrDefault(g => g.Id == id);
+                if (category == null)
                 {
                     throw new Exception(string.Format(CATEGORY.NOT_FOUND, id));
                 }
-                return Category;
+                return category;
             }
             catch (Exception ex)
             {
@@ -129,14 +111,14 @@ namespace Retetar.Services
         /// <summary>
         /// Adds a new Category to the database.
         /// </summary>
-        /// <param name="Category">The Category object to be added.</param>
+        /// <param name="category">The Category object to be added.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Category object is null.</exception>
         /// <exception cref="Exception">Thrown when an error occurs during saving the Category to the database.</exception>
-        public void AddCategory(Category Category)
+        public void AddCategory(Category category)
         {
             try
             {
-                _dbContext.Category.Add(Category);
+                _dbContext.Category.Add(category);
                 _dbContext.SaveChanges();
             }
             catch (Exception ex)
@@ -149,22 +131,22 @@ namespace Retetar.Services
         /// Updates an existing Category in the database.
         /// </summary>
         /// <param name="id">The ID of the Category to be updated.</param>
-        /// <param name="Category">The Category object containing the updated data.</param>
+        /// <param name="category">The Category object containing the updated data.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Category object is null.</exception>
         /// <exception cref="Exception">Thrown when the Category with the specified ID is not found or an error occurs during updating.</exception>
-        public void UpdateCategory(int id, Category Category)
+        public void UpdateCategory(int id, Category category)
         {
             try
             {
-                var existingCategory = _dbContext.Category.Find(id);
+                var existingCategory = _dbContext.Category.FirstOrDefault(g => g.Id == id);
 
                 if (existingCategory == null)
                 {
                     throw new Exception(string.Format(CATEGORY.NOT_FOUND, id));
                 }
 
-                existingCategory.Name = Category.Name;
-                existingCategory.Description = Category.Description;
+                existingCategory.Name = category.Name;
+                existingCategory.Description = category.Description;
 
                 _dbContext.SaveChanges();
 
@@ -184,14 +166,14 @@ namespace Retetar.Services
         {
             try
             {
-                var Category = _dbContext.Category.Find(id);
+                var category = _dbContext.Category.FirstOrDefault(g => g.Id == id);
 
-                if (Category == null)
+                if (category == null)
                 {
                     throw new Exception(string.Format(CATEGORY.NOT_FOUND, id));
                 }
 
-                _dbContext.Category.Remove(Category);
+                _dbContext.Category.Remove(category);
                 _dbContext.SaveChanges();
             }
             catch (Exception ex)

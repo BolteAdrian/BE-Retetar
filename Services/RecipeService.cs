@@ -1,4 +1,5 @@
 ﻿using Retetar.Interfaces;
+using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
 
@@ -12,25 +13,6 @@ namespace Retetar.Services
         public RecipeService(RecipeDbContext dbContext)
         {
             _dbContext = dbContext;
-        }
-
-        /// <summary>
-        /// Retrieves all Recipes from the database.
-        /// </summary>
-        /// <returns>
-        /// Returns a list of all Recipes if successful.
-        /// If an error occurs during processing, throws an exception with an error message.
-        /// </returns>
-        public List<Recipe> GetAllRecipes()
-        {
-            try
-            {
-                return _dbContext.Recipe.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
         }
 
         /// <summary>
@@ -48,19 +30,17 @@ namespace Retetar.Services
                 IQueryable<Recipe> query = _dbContext.Recipe.AsQueryable();
 
                 // Apply search filters
-                if (!string.IsNullOrEmpty(options.SearchTerm))
+                if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
                     query = query.Where(g =>
-                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower)) ||
-                        options.SearchFields.Any(f => g.Category.Name.ToLower().Contains(searchTermLower))
+                        options.SearchFields.Any(f => f != null && g.Name != null && g.Name.ToLower().Contains(searchTermLower))
                     );
                 }
 
                 // Sorting
                 if (!string.IsNullOrEmpty(options.SortField))
                 {
-                    // In this example, we'll use the SortOrder enum to decide whether sorting is done in ascending or descending order
                     bool isAscending = options.SortOrder == SortOrder.Ascending;
                     query = SortQuery(query, options.SortField, isAscending);
                 }
@@ -97,15 +77,13 @@ namespace Retetar.Services
             {
                 case "name":
                     return isAscending ? query.OrderBy(g => g.Name) : query.OrderByDescending(g => g.Name);
-                case "category":
-                    return isAscending ? query.OrderBy(g => g.Category.Name) : query.OrderByDescending(g => g.Category.Name);
                 default:
                     return query; // If the sorting field does not exist or is not specified, return the unchanged query
             }
         }
 
         /// <summary>
-        /// Retrieves a Recipe by its unique identifier from the database.
+        /// Retrieves Recipe details by its unique identifier from the database.
         /// </summary>
         /// <param name="id">The unique identifier of the Recipe.</param>
         /// <returns>
@@ -113,16 +91,50 @@ namespace Retetar.Services
         /// If the Recipe with the specified ID is not found, throws an exception with an appropriate error message.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public Recipe GetRecipeById(int id)
+        public RecipeDetails GetRecipeDetails(int id)
         {
             try
             {
-                var Recipe = _dbContext.Recipe.FirstOrDefault(g => g.Id == id);
-                if (Recipe == null)
+                var recipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == id);
+
+                if (recipe == null)
                 {
                     throw new Exception(string.Format(RECIPE.NOT_FOUND, id));
                 }
-                return Recipe;
+
+                var RecipeCategories = _dbContext.RecipeCategories.Where(rc => rc.RecipeId == id).ToList();
+                var RecipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == id).ToList();
+
+                var Categories = _dbContext.RecipeCategories.Where(i => i.RecipeId == id).ToList();
+
+                foreach (var Category in Categories)
+                {
+                    var categoryEntity = _dbContext.Category.FirstOrDefault(c => c.Id == Category.CategoryId);
+                    if (categoryEntity != null)
+                    {
+                        Category.Category= categoryEntity;
+                    }
+                }
+
+                var RecipeIngredientsList = _dbContext.RecipeIngredients.Where(i => i.RecipeId == id).ToList();
+
+                foreach (var RecipeIngredient in RecipeIngredientsList)
+                {
+                    var ingredientEntity = _dbContext.Ingredient.FirstOrDefault(i => i.Id == RecipeIngredient.IngredientId);
+                    if (ingredientEntity != null)
+                    {
+                        RecipeIngredient.Ingredient = ingredientEntity;
+                    }
+                }
+
+                var recipeDetails = new RecipeDetails
+                {
+                    Recipe = Recipe,
+                    Ingredients = RecipeIngredientsList,
+                    Categories = Categories
+                };
+
+                return recipeDetails;
             }
             catch (Exception ex)
             {
@@ -133,15 +145,53 @@ namespace Retetar.Services
         /// <summary>
         /// Adds a new Recipe to the database.
         /// </summary>
-        /// <param name="Recipe">The Recipe object to be added.</param>
+        /// <param name="recipe">The RecipeEditor object to be added.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Recipe object is null.</exception>
         /// <exception cref="Exception">Thrown when an error occurs during saving the Recipe to the database.</exception>
-        public void AddRecipe(Recipe Recipe)
+        public void AddRecipe(RecipeEditor recipe)
         {
             try
             {
-                _dbContext.Recipe.Add(Recipe);
+                if (recipe == null)
+                {
+                    throw new ArgumentNullException(nameof(recipe));
+                }
+
+                _dbContext.Recipe.Add(recipe.Recipe);
                 _dbContext.SaveChanges();
+
+                if (recipe.Ingredients != null && recipe.Ingredients.Any())
+                {
+                    foreach (var ingredient in recipe.Ingredients)
+                    {
+                        var recipeIngredient = new RecipeIngredients
+                        {
+                            RecipeId = recipe.Recipe.Id,
+                            IngredientId = ingredient.IngredientId,
+                            Quantity = ingredient.Quantity,
+                        };
+
+                        _dbContext.RecipeIngredients.Add(recipeIngredient);
+                    }
+
+                    _dbContext.SaveChanges();
+                }
+
+                if (recipe.Categories != null && recipe.Categories.Any())
+                {
+                    foreach (var category in recipe.Categories)
+                    {
+                        var recipeCategory = new RecipeCategory
+                        {
+                            RecipeId = recipe.Recipe.Id,
+                            CategoryId = category,
+                        };
+
+                        _dbContext.RecipeCategories.Add(recipeCategory);
+                    }
+
+                    _dbContext.SaveChanges();
+                }
             }
             catch (Exception ex)
             {
@@ -153,28 +203,85 @@ namespace Retetar.Services
         /// Updates an existing Recipe in the database.
         /// </summary>
         /// <param name="id">The ID of the Recipe to be updated.</param>
-        /// <param name="Recipe">The Recipe object containing the updated data.</param>
+        /// <param name="updatedRecipe">The Recipe object containing the updated data.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Recipe object is null.</exception>
         /// <exception cref="Exception">Thrown when the Recipe with the specified ID is not found or an error occurs during updating.</exception>
-        public void UpdateRecipe(int id, Recipe Recipe)
+        public void UpdateRecipe(int id, RecipeEditor updatedRecipe)
         {
             try
             {
-                var existingRecipe = _dbContext.Recipe.Find(id);
+                if (updatedRecipe == null)
+                {
+                    throw new ArgumentNullException(nameof(updatedRecipe));
+                }
+
+                var existingRecipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == id);
 
                 if (existingRecipe == null)
                 {
-                    throw new Exception(string.Format(RECIPE.NOT_FOUND, id));
+                    throw new ArgumentNullException(nameof(existingRecipe));
                 }
 
-                existingRecipe.Name = Recipe.Name;
-                existingRecipe.Description = Recipe.Description;
-                existingRecipe.CookingInstructions = Recipe.CookingInstructions;
-                existingRecipe.CategoryId = Recipe.CategoryId;
-                existingRecipe.UserId = Recipe.UserId;
+                existingRecipe.Name = updatedRecipe.Recipe.Name;
+                existingRecipe.Description = updatedRecipe.Recipe.Description;
+                existingRecipe.CookingInstructions = updatedRecipe.Recipe.CookingInstructions;
+
+                if (updatedRecipe.Ingredients != null)
+                {
+                    var existingRecipeIngredients = _dbContext.RecipeIngredients
+                        .Where(ri => ri.RecipeId == id)
+                        .ToList();
+
+                    foreach (var existingIngredient in existingRecipeIngredients)
+                    {
+                        var updatedIngredient = updatedRecipe.Ingredients.FirstOrDefault(ui => ui.Id == existingIngredient.Id);
+
+                        if (updatedIngredient == null)
+                        {
+                            _dbContext.RecipeIngredients.Remove(existingIngredient);
+                        }
+                        else
+                        {
+                            existingIngredient.Quantity = updatedIngredient.Quantity;
+                        }
+                    }
+
+                    foreach (var ingredient in updatedRecipe.Ingredients.Where(ui => !existingRecipeIngredients.Any(ei => ei.Id == ui.Id)))
+                    {
+                        _dbContext.RecipeIngredients.Add(new RecipeIngredients
+                        {
+                            RecipeId = existingRecipe.Id,
+                            IngredientId = ingredient.IngredientId,
+                            Quantity = ingredient.Quantity
+                        });
+                    }
+                }
+
+                if (updatedRecipe.Categories != null)
+                {
+                    var existingRecipeCategories = _dbContext.RecipeCategories
+                        .Where(rc => rc.RecipeId == id)
+                        .ToList();
+
+                    foreach (var existingCategory in existingRecipeCategories)
+                    {
+                        if (!updatedRecipe.Categories.Contains(existingCategory.CategoryId))
+                        {
+                            _dbContext.RecipeCategories.Remove(existingCategory);
+                        }
+                    }
+
+                    foreach (var categoryId in updatedRecipe.Categories.Where(uc => !existingRecipeCategories.Any(ec => ec.CategoryId == uc)))
+                    {
+                        _dbContext.RecipeCategories.Add(new RecipeCategory
+                        {
+                            RecipeId = existingRecipe.Id,
+                            CategoryId = categoryId
+                        });
+                    }
+                }
 
                 _dbContext.SaveChanges();
-
             }
             catch (Exception ex)
             {
@@ -185,25 +292,31 @@ namespace Retetar.Services
         /// <summary>
         /// Deletes a Recipe from the database based on its unique identifier.
         /// </summary>
-        /// <param name="id">The unique identifier of the Recipe to be deleted.</param>
+        /// <param name="recipeId">The unique identifier of the Recipe to be deleted.</param>
         /// <exception cref="Exception">Thrown when the Recipe is not found or an error occurs during deletion.</exception>
-        public void DeleteRecipe(int id)
+        public void DeleteRecipe(int recipeId)
         {
             try
             {
-                var Recipe = _dbContext.Recipe.Find(id);
+                var existingRecipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == recipeId);
 
-                if (Recipe == null)
+                if (existingRecipe == null)
                 {
-                    throw new Exception(string.Format(RECIPE.NOT_FOUND, id));
+                    throw new ArgumentNullException(nameof(existingRecipe));
                 }
 
-                _dbContext.Recipe.Remove(Recipe);
+                var recipeCategories = _dbContext.RecipeCategories.Where(rc => rc.RecipeId == recipeId).ToList();
+                _dbContext.RecipeCategories.RemoveRange(recipeCategories);
+
+                var recipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == recipeId).ToList();
+                _dbContext.RecipeIngredients.RemoveRange(recipeIngredients);
+
+                _dbContext.Recipe.Remove(existingRecipe);
                 _dbContext.SaveChanges();
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format(RECIPE.ERROR_DELETING, id), ex);
+                throw new Exception(string.Format(RECIPE.ERROR_DELETING, recipeId), ex);
             }
         }
     }

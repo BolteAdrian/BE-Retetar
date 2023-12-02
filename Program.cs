@@ -5,6 +5,7 @@ using Retetar.Interfaces;
 using Retetar.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
+using Retetar.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<IngredientQuantitiesService>();
 
 builder.Services.Configure<IEmailConfiguration>(builder.Configuration.GetSection("EmailConfiguration")); // Register EmailConfiguration
 builder.Services.AddTransient<IEmailSender, EmailSender>(); // Register EmailSender

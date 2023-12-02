@@ -18,38 +18,6 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Retrieves all Recipes from the database.
-        /// </summary>
-        /// <remarks>
-        /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
-        /// </remarks>
-        /// <returns>
-        /// Returns a list of all Recipes if successful.
-        /// If no Recipes are found, returns a NotFound response with an appropriate message.
-        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
-        /// </returns>
-        [HttpGet]
-        [Authorize(Policy = "ManagerOnly")]
-        public IActionResult GetAllRecipes()
-        {
-            try
-            {
-                var Recipes = _RecipeService.GetAllRecipes();
-
-                if (Recipes == null)
-                {
-                    return NotFound(RECIPE.NOT_FOUND);
-                }
-
-                return Ok(Recipes);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
-            }
-        }
-
-        /// <summary>
         /// Retrieves a paginated list of Recipes based on the provided search and pagination options.
         /// </summary>
         /// <param name="options">The pagination and search options.</param>
@@ -58,18 +26,18 @@ namespace Retetar.Controllers
         /// If no Recipes are found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
-        [HttpGet("paginated")]
+        [HttpGet]
         public IActionResult GetAllRecipesPaginated([FromQuery] IPaginationAndSearchOptions options)
         {
             try
             {
-                var Recipes = _RecipeService.GetAllRecipesPaginated(options);
+                var recipes = _RecipeService.GetAllRecipesPaginated(options);
 
-                if (Recipes == null)
+                if (recipes == null)
                 {
                     return NotFound(RECIPE.NOT_FOUND);
                 }
-                return Ok(Recipes);
+                return Ok(recipes);
             }
             catch (Exception ex)
             {
@@ -78,7 +46,7 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Retrieves a Recipe by its unique identifier.
+        /// Retrieves Recipe details by its unique identifier.
         /// </summary>
         /// <param name="id">The unique identifier of the Recipe.</param>
         /// <returns>
@@ -88,7 +56,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}")]
-        public IActionResult GetRecipeById(int id)
+        public IActionResult GetRecipeDetails(int id)
         {
             try
             {
@@ -96,14 +64,14 @@ namespace Retetar.Controllers
                 {
                     return BadRequest(INVALID_ID);
                 }
-                var Recipe = _RecipeService.GetRecipeById(id);
+                var recipe = _RecipeService.GetRecipeDetails(id);
 
-                if (Recipe == null)
+                if (recipe == null)
                 {
                     return NotFound(RECIPE.NOT_FOUND);
                 }
 
-                return Ok(Recipe);
+                return Ok(recipe);
             }
             catch (Exception ex)
             {
@@ -114,7 +82,7 @@ namespace Retetar.Controllers
         /// <summary>
         /// Adds a new Recipe to the database.
         /// </summary>
-        /// <param name="Recipe">The Recipe information to be added.</param>
+        /// <param name="recipe">The Recipe information to be added.</param>
         /// <remarks>
         /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
         /// </remarks>
@@ -125,18 +93,18 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPost]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult AddRecipe([FromBody] Recipe Recipe)
+        public IActionResult AddRecipe([FromBody] RecipeEditor recipe)
         {
             try
             {
-                if (Recipe == null)
+                if (recipe == null)
                 {
                     return BadRequest(INVALID_DATA);
                 }
 
-                _RecipeService.AddRecipe(Recipe);
+                _RecipeService.AddRecipe(recipe);
 
-                return CreatedAtAction(nameof(GetRecipeById), new { id = Recipe.Id }, Recipe);
+                return CreatedAtAction(nameof(GetRecipeDetails), new { id = recipe.Recipe.Id }, recipe);
             }
             catch (Exception ex)
             {
@@ -148,7 +116,7 @@ namespace Retetar.Controllers
         /// Updates an existing Recipe's information in the database.
         /// </summary>
         /// <param name="id">The ID of the Recipe to be updated.</param>
-        /// <param name="Recipe">The updated Recipe information.</param>
+        /// <param name="recipe">The updated Recipe information.</param>
         /// <remarks>
         /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
         /// </remarks>
@@ -162,7 +130,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPut("{id}")]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult UpdateRecipe(int id, [FromBody] Recipe Recipe)
+        public IActionResult UpdateRecipe(int id, [FromBody] RecipeEditor recipe)
         {
             try
             {
@@ -171,12 +139,12 @@ namespace Retetar.Controllers
                     return BadRequest(INVALID_ID);
                 }
 
-                if (Recipe == null)
+                if (recipe == null)
                 {
                     return BadRequest(INVALID_DATA);
                 }
 
-                _RecipeService.UpdateRecipe(id, Recipe);
+                 _RecipeService.UpdateRecipe(id, recipe);
 
                 return Ok(new { message = RECIPE.SUCCES_UPDATING });
             }

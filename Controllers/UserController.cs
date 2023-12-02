@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Retetar.Interfaces;
+using Retetar.Models;
 using Retetar.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -17,11 +18,11 @@ namespace Retetar.Controllers
     public class UserController : ControllerBase
     {
 
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly SignInManager<User> _signInManager;
         private readonly UserService _userService;
         private readonly IConfiguration _configuration;
 
-        public UserController(SignInManager<IdentityUser> signInManager, UserService userService, IConfiguration configuration)
+        public UserController(SignInManager<User> signInManager, UserService userService, IConfiguration configuration)
         {
             _signInManager = signInManager;
             _userService = userService;
@@ -178,6 +179,20 @@ namespace Retetar.Controllers
             }
         }
 
+        /// <summary>
+        /// Changes the role of a user in the system.
+        /// </summary>
+        /// <param name="userId">The unique identifier of the user.</param>
+        /// <remarks>
+        /// This endpoint allows changing the role of a user and requires appropriate authorization.
+        /// </remarks>
+        /// <returns>
+        /// Returns an IActionResult indicating the result of the role change operation.
+        /// If the provided user ID is invalid, returns a BadRequest response with an appropriate message.
+        /// If the role change is successful, returns an Ok response with a success message.
+        /// If the role change fails, returns a BadRequest response with the error details.
+        /// If an exception occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
         [HttpPost("change-role/{userId}")]
         public async Task<IActionResult> ChangeUserRole(string userId)
         {
@@ -398,18 +413,18 @@ namespace Retetar.Controllers
         /// If the password reset process is successful, returns a success message.
         /// If an error occurs during the password reset process, returns a success message.
         /// </returns>
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] IForgotPassword dataForReset)
+        [HttpPost("reset-password/{email}/{token}")]
+        public async Task<IActionResult> ResetPassword(string email, string token, [FromBody] string newPassword)
         {
             try
             {
-                if (dataForReset.email == null)
+                if (email == null)
                 {
                     return BadRequest(USER.INVALID_EMAIL);
                 }
 
                 // Check the validity of the JWT token
-                var user = await _userService.GetUserByEmail(dataForReset.email);
+                var user = await _userService.GetUserByEmail(email);
 
                 if (user == null)
                 {
@@ -418,14 +433,15 @@ namespace Retetar.Controllers
 
                 // Validate the received JWT token
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                var jwtKey = _configuration["Jwt:Key"];
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("Jwt key is null")));
                 var tokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = securityKey,
                     ValidateIssuer = true,
                     ValidIssuer = _configuration["Jwt:Issuer"],
-                    ValidateAudience = false, // We don't validate the audience because it's not required in this case
+                    ValidateAudience = false, 
                     ValidateLifetime = true
                 };
 
@@ -433,7 +449,7 @@ namespace Retetar.Controllers
                 ClaimsPrincipal claimsPrincipal;
                 try
                 {
-                    claimsPrincipal = tokenHandler.ValidateToken(dataForReset.token, tokenValidationParameters, out _);
+                    claimsPrincipal = tokenHandler.ValidateToken(token, tokenValidationParameters, out _);
                 }
                 catch (Exception ex)
                 {
@@ -441,16 +457,18 @@ namespace Retetar.Controllers
                 }
 
                 // Check if the email in the token matches the user's email
-                var emailClaim = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Email);
-                if (emailClaim == null || emailClaim.Value != dataForReset.email)
+                var emailClaim = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress");
+
+                if (emailClaim == null || emailClaim.Value != email)
                     return BadRequest(USER.INVALID_TOKEN);
 
-                // Implement the logic to reset the password and update it in the database
-                // For example, you can use UserManager to update the user's password:
-                var newPassword = "YourNewPasswordHere"; // You can receive the new password from a form or an action parameter
                 var tokenValidTo = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp)?.Value;
-                var validTo = DateTimeOffset.FromUnixTimeSeconds(long.Parse(tokenValidTo)).UtcDateTime;
-                var resetPasswordResult = await _userService.ResetPasswordAsync(user, dataForReset.token, newPassword);
+                if (tokenValidTo == null)
+                {
+                    return BadRequest(USER.INVALID_TOKEN);
+                }
+
+                var resetPasswordResult = await _userService.ResetPasswordAsync(user, token, newPassword);
                 if (resetPasswordResult.Succeeded)
                 {
                     // Password reset was successful

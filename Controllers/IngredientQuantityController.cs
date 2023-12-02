@@ -10,36 +10,36 @@ namespace Retetar.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    public class IngredientController : ControllerBase
+    public class IngredientQuantitiesController : ControllerBase
     {
-        private readonly IngredientService _IngredientService;
+        private readonly IngredientQuantitiesService _IngredientQuantitiesService;
 
-        public IngredientController(IngredientService IngredientService)
+        public IngredientQuantitiesController(IngredientQuantitiesService IngredientQuantitiesService)
         {
-            _IngredientService = IngredientService;
+            _IngredientQuantitiesService = IngredientQuantitiesService;
         }
 
         /// <summary>
-        /// Retrieves a paginated list of Ingredients based on the provided search and pagination options.
+        /// Retrieves a paginated list of IngredientQuantitiess based on the provided search and pagination options.
         /// </summary>
         /// <param name="options">The pagination and search options.</param>
         /// <returns>
-        /// Returns a paginated list of Ingredients if successful.
-        /// If no Ingredients are found, returns a NotFound response with an appropriate message.
+        /// Returns a paginated list of IngredientQuantitiess if successful.
+        /// If no IngredientQuantitiess are found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllIngredientsPaginated([FromQuery] IPaginationAndSearchOptions options)
+        public IActionResult GetAllIngredientQuantitiessPaginated([FromQuery] IPaginationAndSearchOptions options)
         {
             try
             {
-                var ingredients = _IngredientService.GetAllIngredientsPaginated(options);
+                var ingredientQuantitiess = _IngredientQuantitiesService.GetAllIngredientQuantitiessPaginated(options);
 
-                if (ingredients == null)
+                if (ingredientQuantitiess == null)
                 {
                     return NotFound(INGREDIENT.NOT_FOUND);
                 }
-                return Ok(ingredients);
+                return Ok(ingredientQuantitiess);
             }
             catch (Exception ex)
             {
@@ -48,17 +48,17 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Retrieves a Ingredient by its unique identifier.
+        /// Retrieves a IngredientQuantities by its unique identifier.
         /// </summary>
-        /// <param name="id">The unique identifier of the Ingredient.</param>
+        /// <param name="id">The unique identifier of the IngredientQuantities.</param>
         /// <returns>
-        /// Returns the Ingredient's information if found.
+        /// Returns the IngredientQuantities's information if found.
         /// If the provided ID is invalid, returns a BadRequest response with an appropriate message.
-        /// If no Ingredient is found with the specified ID, returns a NotFound response with an appropriate message.
+        /// If no IngredientQuantities is found with the specified ID, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}")]
-        public IActionResult GetIngredientById(int id)
+        public IActionResult GetIngredientQuantitiesById(int id)
         {
             try
             {
@@ -66,14 +66,14 @@ namespace Retetar.Controllers
                 {
                     return BadRequest(INVALID_ID);
                 }
-                var ingredient = _IngredientService.GetIngredientById(id);
+                var ingredientQuantities = _IngredientQuantitiesService.GetIngredientQuantitiesById(id);
 
-                if (ingredient == null)
+                if (ingredientQuantities == null)
                 {
                     return NotFound(INGREDIENT.NOT_FOUND);
                 }
 
-                return Ok(ingredient);
+                return Ok(ingredientQuantities);
             }
             catch (Exception ex)
             {
@@ -82,31 +82,31 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Adds a new Ingredient to the database.
+        /// Adds a new IngredientQuantities to the database.
         /// </summary>
-        /// <param name="ingredient">The Ingredient information to be added.</param>
+        /// <param name="ingredientQuantities">The IngredientQuantities information to be added.</param>
         /// <remarks>
         /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
         /// </remarks>
         /// <returns>
-        /// Returns a CreatedAtAction response with the URL of the newly created Ingredient if successful.
-        /// If the provided Ingredient data is invalid, returns a BadRequest response with an appropriate message.
+        /// Returns a CreatedAtAction response with the URL of the newly created IngredientQuantities if successful.
+        /// If the provided IngredientQuantities data is invalid, returns a BadRequest response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpPost]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult AddIngredient([FromBody] Ingredient ingredient)
+        public IActionResult AddIngredientQuantities([FromBody] IngredientQuantities ingredientQuantities)
         {
             try
             {
-                if (ingredient == null)
+                if (ingredientQuantities == null)
                 {
                     return BadRequest(INVALID_DATA);
                 }
 
-                _IngredientService.AddIngredient(ingredient);
+                _IngredientQuantitiesService.AddIngredientQuantities(ingredientQuantities);
 
-                return CreatedAtAction(nameof(GetIngredientById), new { id = ingredient.Id }, ingredient);
+                return CreatedAtAction(nameof(GetIngredientQuantitiesById), new { id = ingredientQuantities.Id }, ingredientQuantities);
             }
             catch (Exception ex)
             {
@@ -115,10 +115,10 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Updates an existing Ingredient's information in the database.
+        /// Updates an existing IngredientQuantities's information in the database.
         /// </summary>
-        /// <param name="id">The ID of the Ingredient to be updated.</param>
-        /// <param name="ingredient">The updated Ingredient information.</param>
+        /// <param name="id">The ID of the IngredientQuantities to be updated.</param>
+        /// <param name="ingredientQuantities">The updated IngredientQuantities information.</param>
         /// <remarks>
         /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
         /// </remarks>
@@ -126,13 +126,13 @@ namespace Retetar.Controllers
         /// Returns a status code indicating the result of the update operation.
         /// If successful, returns a success message.
         /// If the provided ID is invalid, returns a BadRequest response.
-        /// If the provided Ingredient data is invalid, returns a BadRequest response.
-        /// If the Ingredient with the specified ID is not found, returns a NotFound response.
+        /// If the provided IngredientQuantities data is invalid, returns a BadRequest response.
+        /// If the IngredientQuantities with the specified ID is not found, returns a NotFound response.
         /// If an error occurs during the update operation, returns a 500 Internal Server Error response with an error message.
         /// </returns>
         [HttpPut("{id}")]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult UpdateIngredient(int id, [FromBody] Ingredient ingredient)
+        public IActionResult UpdateIngredientQuantities(int id, [FromBody] IngredientQuantities ingredientQuantities)
         {
             try
             {
@@ -141,12 +141,12 @@ namespace Retetar.Controllers
                     return BadRequest(INVALID_ID);
                 }
 
-                if (ingredient == null)
+                if (ingredientQuantities == null)
                 {
                     return BadRequest(INVALID_DATA);
                 }
 
-                _IngredientService.UpdateIngredient(id, ingredient);
+                _IngredientQuantitiesService.UpdateIngredientQuantities(id, ingredientQuantities);
 
                 return Ok(new { message = INGREDIENT.SUCCES_UPDATING });
             }
@@ -157,21 +157,21 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Deletes a Ingredient from the database based on its unique identifier.
+        /// Deletes a IngredientQuantities from the database based on its unique identifier.
         /// </summary>
-        /// <param name="id">The unique identifier of the Ingredient to be deleted.</param>
+        /// <param name="id">The unique identifier of the IngredientQuantities to be deleted.</param>
         /// <remarks>
         /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
         /// </remarks>
         /// <returns>
         /// Returns a status code indicating the result of the update operation.
         /// If the provided ID is invalid, returns a BadRequest response with an appropriate message.
-        /// If the Ingredient with the specified ID is not found, returns a NotFound response with an appropriate message.
+        /// If the IngredientQuantities with the specified ID is not found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpDelete("{id}")]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult DeleteIngredient(int id)
+        public IActionResult DeleteIngredientQuantities(int id)
         {
             try
             {
@@ -180,7 +180,7 @@ namespace Retetar.Controllers
                     return BadRequest(INVALID_ID);
                 }
 
-                _IngredientService.DeleteIngredient(id);
+                _IngredientQuantitiesService.DeleteIngredientQuantities(id);
                 return Ok(new { message = INGREDIENT.SUCCES_DELETING });
 
             }

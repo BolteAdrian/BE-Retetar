@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Retetar.Interfaces;
+using Retetar.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -35,12 +36,13 @@ namespace Retetar.Services
             try
             {
                 var users = await _userManager.Users.ToListAsync();
-                return users.Select(u => new User
+
+                if (users == null)
                 {
-                    UserName = u.UserName,
-                    Email = u.Email,
-                    Id = u.Id
-                }).ToList();
+                    throw new Exception(string.Format(USER.NOT_FOUND));
+                }
+
+                return users;
             }
             catch (Exception ex)
             {
@@ -89,7 +91,7 @@ namespace Retetar.Services
             try
             {
                 // Manually hash the password
-                var passwordHasher = new PasswordHasher<IdentityUser>();
+                var passwordHasher = new PasswordHasher<User>();
                 user.PasswordHash = passwordHasher.HashPassword(user, password);
 
                 // Add the user to the database using the UserManager
@@ -123,7 +125,7 @@ namespace Retetar.Services
                 if (user != null)
                 {
                     // Ensure the provided password is hashed before using it for authentication
-                    var passwordHasher = new PasswordHasher<IdentityUser>();
+                    var passwordHasher = new PasswordHasher<User>();
                     var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
                     if (result == PasswordVerificationResult.Success)
                     {
@@ -296,19 +298,21 @@ namespace Retetar.Services
                     throw new ArgumentException("User or user email is null.");
                 }
 
-                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                var jwtKey = _configuration["Jwt:Key"];
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("Jwt key is null")));;
                 var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
                 var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
 
-                var token = new JwtSecurityToken(_configuration["Jwt:Issuer"],
-                    _configuration["Jwt:Issuer"],
-                    claims,
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["Jwt:Issuer"],
+                    audience: _configuration["Jwt:Issuer"],
+                    claims: claims,
                     expires: DateTime.Now.AddMinutes(120),
                     signingCredentials: credentials);
 
@@ -319,7 +323,6 @@ namespace Retetar.Services
                 throw new Exception("Unknown Error!", ex);
             }
         }
-
 
         /// <summary>
         /// Sends a password reset email containing a reset link to the user's email address.
@@ -333,7 +336,7 @@ namespace Retetar.Services
             try
             {
                 var resetUrl = GetResetPasswordUrl(email, resetPasswordToken);
-                var emailMessage = $"Please click the link below to reset your password: \n\n{resetUrl}";
+                var emailMessage = $"Please click the link below to reset your password: <br>{resetUrl}";
                 await _emailSender.SendEmailAsync(email, "Reset Password", emailMessage);
             }
             catch (Exception ex)
@@ -353,14 +356,13 @@ namespace Retetar.Services
         {
             try
             {
-                return $"https://localhost:44362/api/User/reset-password?email={email}&token={resetPasswordToken}";
+                return $"<a href=\"https://{_configuration["Frontend:HostName"]}/api/User/reset-password/{email}/{resetPasswordToken}\">Reset Password</a>";
             }
             catch (Exception ex)
             {
                 throw new Exception("Unknown Error!", ex);
             }
         }
-
 
         /// <summary>
         /// Asynchronously resets the password for the specified user using the provided token and new password.
@@ -381,7 +383,10 @@ namespace Retetar.Services
                 }
 
                 // Reset the user's password using the UserManager
-                var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+                await _userManager.RemovePasswordAsync(user);
+
+                var result = await _userManager.AddPasswordAsync(user, newPassword);
+                
                 return result;
             }
             catch (Exception ex)

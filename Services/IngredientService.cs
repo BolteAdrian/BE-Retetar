@@ -1,4 +1,5 @@
 ﻿using Retetar.Interfaces;
+using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
 
@@ -11,25 +12,6 @@ namespace Retetar.Services
         public IngredientService(RecipeDbContext dbContext)
         {
             _dbContext = dbContext;
-        }
-
-        /// <summary>
-        /// Retrieves all Ingredients from the database.
-        /// </summary>
-        /// <returns>
-        /// Returns a list of all Ingredients if successful.
-        /// If an error occurs during processing, throws an exception with an error message.
-        /// </returns>
-        public List<Ingredient> GetAllIngredients()
-        {
-            try
-            {
-                return _dbContext.Ingredient.ToList();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
         }
 
         /// <summary>
@@ -47,7 +29,7 @@ namespace Retetar.Services
                 IQueryable<Ingredient> query = _dbContext.Ingredient.AsQueryable();
 
                 // Apply search filters
-                if (!string.IsNullOrEmpty(options.SearchTerm))
+                if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
                     query = query.Where(g =>
@@ -113,12 +95,12 @@ namespace Retetar.Services
         {
             try
             {
-                var Ingredient = _dbContext.Ingredient.FirstOrDefault(g => g.Id == id);
-                if (Ingredient == null)
+                var ingredient = _dbContext.Ingredient.FirstOrDefault(g => g.Id == id);
+                if (ingredient == null)
                 {
                     throw new Exception(string.Format(INGREDIENT.NOT_FOUND, id));
                 }
-                return Ingredient;
+                return ingredient;
             }
             catch (Exception ex)
             {
@@ -129,14 +111,14 @@ namespace Retetar.Services
         /// <summary>
         /// Adds a new Ingredient to the database.
         /// </summary>
-        /// <param name="Ingredient">The Ingredient object to be added.</param>
+        /// <param name="ingredient">The Ingredient object to be added.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Ingredient object is null.</exception>
         /// <exception cref="Exception">Thrown when an error occurs during saving the Ingredient to the database.</exception>
-        public void AddIngredient(Ingredient Ingredient)
+        public void AddIngredient(Ingredient ingredient)
         {
             try
             {
-                _dbContext.Ingredient.Add(Ingredient);
+                _dbContext.Ingredient.Add(ingredient);
                 _dbContext.SaveChanges();
             }
             catch (Exception ex)
@@ -149,22 +131,22 @@ namespace Retetar.Services
         /// Updates an existing Ingredient in the database.
         /// </summary>
         /// <param name="id">The ID of the Ingredient to be updated.</param>
-        /// <param name="Ingredient">The Ingredient object containing the updated data.</param>
+        /// <param name="ingredient">The Ingredient object containing the updated data.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Ingredient object is null.</exception>
         /// <exception cref="Exception">Thrown when the Ingredient with the specified ID is not found or an error occurs during updating.</exception>
-        public void UpdateIngredient(int id, Ingredient Ingredient)
+        public void UpdateIngredient(int id, Ingredient ingredient)
         {
             try
             {
-                var existingIngredient = _dbContext.Ingredient.Find(id);
+                var existingIngredient = _dbContext.Ingredient.FirstOrDefault(g => g.Id == id);
 
                 if (existingIngredient == null)
                 {
                     throw new Exception(string.Format(INGREDIENT.NOT_FOUND, id));
                 }
 
-                existingIngredient.Name = Ingredient.Name;
-                existingIngredient.AvailableQuantity = Ingredient.AvailableQuantity;
+                existingIngredient.Name = ingredient.Name;
+                existingIngredient.Description = ingredient.Description;
 
                 _dbContext.SaveChanges();
 
@@ -184,14 +166,20 @@ namespace Retetar.Services
         {
             try
             {
-                var Ingredient = _dbContext.Ingredient.Find(id);
+                var ingredient = _dbContext.Ingredient.FirstOrDefault(g => g.Id == id);
 
-                if (Ingredient == null)
+                if (ingredient == null)
                 {
                     throw new Exception(string.Format(INGREDIENT.NOT_FOUND, id));
                 }
 
-                _dbContext.Ingredient.Remove(Ingredient);
+                var IngredientQuantities = _dbContext.IngredientQuantities.Where(g => g.IngredientId == id).ToList();
+                _dbContext.IngredientQuantities.RemoveRange(IngredientQuantities);
+
+                var recipeIngredients = _dbContext.RecipeIngredients.Where(rc => rc.IngredientId == id).ToList();
+                _dbContext.RecipeIngredients.RemoveRange(recipeIngredients);
+
+                _dbContext.Ingredient.Remove(ingredient);
                 _dbContext.SaveChanges();
             }
             catch (Exception ex)

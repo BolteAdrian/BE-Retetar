@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Retetar.Interfaces
+namespace Retetar.Models
 {
     public class User : IdentityUser
     {
