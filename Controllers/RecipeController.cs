@@ -33,17 +33,19 @@ namespace Retetar.Controllers
             {
                 var recipes = _RecipeService.GetAllRecipesPaginated(options);
 
-                if (recipes == null)
+                if (recipes == null || !recipes.Any())
                 {
-                    return NotFound(RECIPE.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
                 }
-                return Ok(recipes);
+
+                return Ok(new { status = StatusCodes.Status200OK, recipes });
             }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
             }
         }
+
 
         /// <summary>
         /// Retrieves Recipe details by its unique identifier.
@@ -62,16 +64,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
+
                 var recipe = _RecipeService.GetRecipeDetails(id);
 
                 if (recipe == null)
                 {
-                    return NotFound(RECIPE.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
                 }
 
-                return Ok(recipe);
+                return Ok(new { status = StatusCodes.Status200OK, recipe });
             }
             catch (Exception ex)
             {
@@ -99,12 +102,13 @@ namespace Retetar.Controllers
             {
                 if (recipe == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _RecipeService.AddRecipe(recipe);
 
-                return CreatedAtAction(nameof(GetRecipeDetails), new { id = recipe.Recipe.Id }, recipe);
+                // Return the created recipe's details
+                return CreatedAtAction(nameof(GetRecipeDetails), new { id = recipe.Recipe.Id }, new { status = StatusCodes.Status201Created, recipe });
             }
             catch (Exception ex)
             {
@@ -136,23 +140,31 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 if (recipe == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
-                 _RecipeService.UpdateRecipe(id, recipe);
+                var updateResult = _RecipeService.UpdateRecipe(id, recipe);
 
-                return Ok(new { message = RECIPE.SUCCES_UPDATING });
+                if (updateResult != null)
+                {
+                    return Ok(new { status = StatusCodes.Status200OK, message = RECIPE.SUCCESS_UPDATING });
+                }
+                else
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
+                }
             }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.ERROR_UPDATING, error = ex.Message });
             }
         }
+
 
         /// <summary>
         /// Deletes a Recipe from the database based on its unique identifier.
@@ -175,12 +187,19 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
-                _RecipeService.DeleteRecipe(id);
-                return Ok(new { message = RECIPE.SUCCES_DELETING });
+                var deleteResult = _RecipeService.DeleteRecipe(id);
 
+                if (deleteResult)
+                {
+                    return Ok(new { status = StatusCodes.Status200OK, message = RECIPE.SUCCESS_DELETING });
+                }
+                else
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
+                }
             }
             catch (Exception ex)
             {

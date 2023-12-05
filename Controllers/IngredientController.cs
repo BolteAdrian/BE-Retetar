@@ -37,9 +37,9 @@ namespace Retetar.Controllers
 
                 if (ingredients == null)
                 {
-                    return NotFound(INGREDIENT.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
                 }
-                return Ok(ingredients);
+                return Ok(new { status = StatusCodes.Status200OK, ingredients });
             }
             catch (Exception ex)
             {
@@ -64,16 +64,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
+
                 var ingredient = _IngredientService.GetIngredientById(id);
 
                 if (ingredient == null)
                 {
-                    return NotFound(INGREDIENT.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
                 }
 
-                return Ok(ingredient);
+                return Ok(new { status = StatusCodes.Status200OK, ingredient });
             }
             catch (Exception ex)
             {
@@ -101,18 +102,19 @@ namespace Retetar.Controllers
             {
                 if (ingredient == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _IngredientService.AddIngredient(ingredient);
 
-                return CreatedAtAction(nameof(GetIngredientById), new { id = ingredient.Id }, ingredient);
+                return CreatedAtAction(nameof(GetIngredientById), new { id = ingredient.Id }, new { status = StatusCodes.Status201Created, ingredient });
             }
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_SAVED, error = ex.Message });
             }
         }
+
 
         /// <summary>
         /// Updates an existing Ingredient's information in the database.
@@ -138,17 +140,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 if (ingredient == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _IngredientService.UpdateIngredient(id, ingredient);
 
-                return Ok(new { message = INGREDIENT.SUCCES_UPDATING });
+                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_UPDATING });
             }
             catch (Exception ex)
             {
@@ -177,11 +179,11 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 _IngredientService.DeleteIngredient(id);
-                return Ok(new { message = INGREDIENT.SUCCES_DELETING });
+                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_DELETING });
 
             }
             catch (Exception ex)

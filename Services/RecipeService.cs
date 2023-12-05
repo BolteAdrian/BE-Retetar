@@ -129,7 +129,7 @@ namespace Retetar.Services
 
                 var recipeDetails = new RecipeDetails
                 {
-                    Recipe = Recipe,
+                    Recipe = recipe,
                     Ingredients = RecipeIngredientsList,
                     Categories = Categories
                 };
@@ -206,7 +206,7 @@ namespace Retetar.Services
         /// <param name="updatedRecipe">The Recipe object containing the updated data.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Recipe object is null.</exception>
         /// <exception cref="Exception">Thrown when the Recipe with the specified ID is not found or an error occurs during updating.</exception>
-        public void UpdateRecipe(int id, RecipeEditor updatedRecipe)
+        public RecipeEditor UpdateRecipe(int id, RecipeEditor updatedRecipe)
         {
             try
             {
@@ -282,6 +282,8 @@ namespace Retetar.Services
                 }
 
                 _dbContext.SaveChanges();
+
+                return updatedRecipe;
             }
             catch (Exception ex)
             {
@@ -294,7 +296,7 @@ namespace Retetar.Services
         /// </summary>
         /// <param name="recipeId">The unique identifier of the Recipe to be deleted.</param>
         /// <exception cref="Exception">Thrown when the Recipe is not found or an error occurs during deletion.</exception>
-        public void DeleteRecipe(int recipeId)
+        public bool DeleteRecipe(int recipeId)
         {
             try
             {
@@ -313,6 +315,7 @@ namespace Retetar.Services
 
                 _dbContext.Recipe.Remove(existingRecipe);
                 _dbContext.SaveChanges();
+                return true;
             }
             catch (Exception ex)
             {

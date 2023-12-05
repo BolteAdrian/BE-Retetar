@@ -48,12 +48,12 @@ namespace Retetar.Controllers
             {
                 var users = await _userService.GetAllUsers();
 
-                if (users == null)
+                if (users == null || !users.Any())
                 {
-                    return NotFound(USER.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = USER.NOT_FOUND });
                 }
 
-                return Ok(users);
+                return Ok(new { status = StatusCodes.Status200OK, users });
             }
             catch (Exception ex)
             {
@@ -79,17 +79,17 @@ namespace Retetar.Controllers
             {
                 if (id == null)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 var user = await _userService.GetUserById(id);
 
                 if (user == null)
                 {
-                    return NotFound(USER.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = USER.NOT_FOUND });
                 }
 
-                return Ok(user);
+                return Ok(new { status = StatusCodes.Status200OK, user });
             }
             catch (Exception ex)
             {
@@ -115,7 +115,7 @@ namespace Retetar.Controllers
             {
                 if (model == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 var user = new User
@@ -132,10 +132,10 @@ namespace Retetar.Controllers
                 {
                     await _signInManager.SignInAsync(user, isPersistent: false);
 
-                    return Ok(USER.SUCCES_REGISTRATION);
+                    return Ok(new {status = StatusCodes.Status200OK, message = USER.SUCCESS_REGISTRATION });
                 }
 
-                return BadRequest(result.Errors);
+                return BadRequest(new { status = StatusCodes.Status400BadRequest, errors = result.Errors });
             }
             catch (Exception ex)
             {
@@ -161,21 +161,21 @@ namespace Retetar.Controllers
             {
                 if (model == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 var result = await _userService.LoginUserAsync(model.Email, model.Password);
 
                 if (result.Succeeded)
                 {
-                    return Ok(USER.SUCCES_LOGIN);
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN });
                 }
 
-                return BadRequest(USER.ERROR_LOGIN);
+                return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_LOGIN });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.ERROR_LOGIN, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, message = USER.ERROR_LOGIN, error = ex.Message });
             }
         }
 
@@ -200,23 +200,23 @@ namespace Retetar.Controllers
             {
                 if (string.IsNullOrWhiteSpace(userId))
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 var result = await _userService.ChangeUserRoleAsync(userId);
 
                 if (result.Succeeded)
                 {
-                    return Ok(USER.CHANGE_ROLE);
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.CHANGE_ROLE });
                 }
                 else
                 {
-                    return BadRequest(result.Errors);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = result.Errors });
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.ERROR_CHANGE_ROLE, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, message = USER.ERROR_CHANGE_ROLE, error = ex.Message });
             }
         }
 
@@ -241,22 +241,21 @@ namespace Retetar.Controllers
             {
                 if (string.IsNullOrWhiteSpace(userId))
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 var result = await _userService.DeleteAccount(userId);
 
                 if (!result)
                 {
-                    return Ok(USER.ERROR_DELETING);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_DELETING });
                 }
 
-                return Ok(new { message = USER.SUCCES_DELETING });
-
+                return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_DELETING });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.ERROR_DELETING, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, message = USER.ERROR_DELETING, error = ex.Message });
             }
         }
 
@@ -282,27 +281,26 @@ namespace Retetar.Controllers
             {
                 if (string.IsNullOrWhiteSpace(userId))
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
-                if (newEmail == null)
+                if (string.IsNullOrEmpty(newEmail))
                 {
-                    return BadRequest(USER.INVALID_EMAIL);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_EMAIL });
                 }
 
                 var result = await _userService.UpdateEmail(userId, newEmail);
 
                 if (!result)
                 {
-                    return Ok(USER.ERROR_UPDATING_EMAIL);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_UPDATING_EMAIL });
                 }
 
-                return Ok(new { message = USER.SUCCES_UPDATING_EMAIL });
-
+                return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_UPDATING_EMAIL });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.ERROR_UPDATING_EMAIL, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, message = USER.ERROR_UPDATING_EMAIL, error = ex.Message });
             }
         }
 
@@ -326,29 +324,23 @@ namespace Retetar.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(userId))
+                if (string.IsNullOrWhiteSpace(userId) || model == null)
                 {
-                    return BadRequest(INVALID_DATA);
-                }
-
-                if (model == null)
-                {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 var result = await _userService.UpdatePassword(userId, model.CurrentPassword, model.NewPassword);
 
                 if (!result)
                 {
-                    return Ok(USER.PASSWORD_ERROR);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.PASSWORD_ERROR });
                 }
 
-                return Ok(new { message = USER.SUCCES_UPDATING_PASSWORD });
-
+                return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_UPDATING_PASSWORD });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.PASSWORD_ERROR, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, message = USER.PASSWORD_ERROR, error = ex.Message });
             }
         }
 
@@ -371,32 +363,33 @@ namespace Retetar.Controllers
             {
                 if (email == null)
                 {
-                    return BadRequest(USER.INVALID_EMAIL);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_EMAIL });
                 }
 
                 var user = await _userService.GetUserByEmail(email);
 
                 if (user == null)
                 {
-                    return NotFound(USER.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = USER.NOT_FOUND });
                 }
 
                 var resetPasswordToken = _userService.GenerateJwtToken(user);
 
                 if (resetPasswordToken == null)
                 {
-                    return BadRequest(USER.INVALID_TOKEN);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
                 }
 
                 await _userService.SendPasswordResetEmail(email, resetPasswordToken);
 
-                return Ok(USER.RESET_EMAIL_SEND);
+                return Ok(new { status = StatusCodes.Status200OK, message = USER.RESET_EMAIL_SEND });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { status = StatusCodes.Status500InternalServerError, error = ex.Message });
             }
         }
+
 
         /// <summary>
         /// Resets the password for a user using a valid password reset token.
@@ -420,7 +413,7 @@ namespace Retetar.Controllers
             {
                 if (email == null)
                 {
-                    return BadRequest(USER.INVALID_EMAIL);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_EMAIL });
                 }
 
                 // Check the validity of the JWT token
@@ -428,7 +421,7 @@ namespace Retetar.Controllers
 
                 if (user == null)
                 {
-                    return NotFound(USER.INVALID_EMAIL);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = USER.INVALID_EMAIL });
                 }
 
                 // Validate the received JWT token
@@ -441,7 +434,7 @@ namespace Retetar.Controllers
                     IssuerSigningKey = securityKey,
                     ValidateIssuer = true,
                     ValidIssuer = _configuration["Jwt:Issuer"],
-                    ValidateAudience = false, 
+                    ValidateAudience = false,
                     ValidateLifetime = true
                 };
 
@@ -453,32 +446,32 @@ namespace Retetar.Controllers
                 }
                 catch (Exception ex)
                 {
-                    return BadRequest(USER.INVALID_TOKEN + ex.Message);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN, error = ex.Message });
                 }
 
                 // Check if the email in the token matches the user's email
                 var emailClaim = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress");
 
                 if (emailClaim == null || emailClaim.Value != email)
-                    return BadRequest(USER.INVALID_TOKEN);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
 
                 var tokenValidTo = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp)?.Value;
                 if (tokenValidTo == null)
                 {
-                    return BadRequest(USER.INVALID_TOKEN);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
                 }
 
                 var resetPasswordResult = await _userService.ResetPasswordAsync(user, token, newPassword);
                 if (resetPasswordResult.Succeeded)
                 {
                     // Password reset was successful
-                    return Ok(new { message = USER.SUCCES_UPDATING_PASSWORD });
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_UPDATING_PASSWORD });
                 }
                 else
                 {
                     // An error occurred during password reset
                     // You can access the error details from resetPasswordResult.Errors
-                    return Ok(new { message = USER.PASSWORD_ERROR });
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.PASSWORD_ERROR });
                 }
             }
             catch (Exception ex)

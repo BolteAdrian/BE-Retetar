@@ -33,13 +33,16 @@ namespace Retetar.Controllers
         {
             try
             {
-                var ingredientQuantitiess = _IngredientQuantitiesService.GetAllIngredientQuantitiessPaginated(options);
+                var ingredientQuantities = _IngredientQuantitiesService.GetAllIngredientQuantitiessPaginated(options);
 
-                if (ingredientQuantitiess == null)
+                if (ingredientQuantities != null && ingredientQuantities.Any())
                 {
-                    return NotFound(INGREDIENT.NOT_FOUND);
+                    return Ok(new { status = StatusCodes.Status200OK, ingredientQuantities });
                 }
-                return Ok(ingredientQuantitiess);
+                else
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
             }
             catch (Exception ex)
             {
@@ -64,16 +67,19 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
+
                 var ingredientQuantities = _IngredientQuantitiesService.GetIngredientQuantitiesById(id);
 
-                if (ingredientQuantities == null)
+                if (ingredientQuantities != null)
                 {
-                    return NotFound(INGREDIENT.NOT_FOUND);
+                    return Ok(new { status = StatusCodes.Status200OK, ingredientQuantities });
                 }
-
-                return Ok(ingredientQuantities);
+                else
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
             }
             catch (Exception ex)
             {
@@ -101,7 +107,7 @@ namespace Retetar.Controllers
             {
                 if (ingredientQuantities == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _IngredientQuantitiesService.AddIngredientQuantities(ingredientQuantities);
@@ -138,17 +144,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 if (ingredientQuantities == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _IngredientQuantitiesService.UpdateIngredientQuantities(id, ingredientQuantities);
 
-                return Ok(new { message = INGREDIENT.SUCCES_UPDATING });
+                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_UPDATING });
             }
             catch (Exception ex)
             {
@@ -177,11 +183,11 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 _IngredientQuantitiesService.DeleteIngredientQuantities(id);
-                return Ok(new { message = INGREDIENT.SUCCES_DELETING });
+                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_DELETING });
 
             }
             catch (Exception ex)

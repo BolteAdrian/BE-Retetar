@@ -35,11 +35,12 @@ namespace Retetar.Controllers
             {
                 var categories = _CategoryService.GetAllCategorysPaginated(options);
 
-                if (categories == null)
+                if (categories == null || !categories.Any())
                 {
-                    return NotFound(CATEGORY.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = CATEGORY.NOT_FOUND });
                 }
-                return Ok(categories);
+
+                return Ok(new { status = StatusCodes.Status200OK, data = categories });
             }
             catch (Exception ex)
             {
@@ -64,16 +65,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
+
                 var category = _CategoryService.GetCategoryById(id);
 
                 if (category == null)
                 {
-                    return NotFound(CATEGORY.NOT_FOUND);
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = CATEGORY.NOT_FOUND });
                 }
 
-                return Ok(category);
+                return Ok(new { status = StatusCodes.Status200OK, data = category });
             }
             catch (Exception ex)
             {
@@ -101,12 +103,12 @@ namespace Retetar.Controllers
             {
                 if (category == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _CategoryService.AddCategory(category);
 
-                return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, category);
+                return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, new { status = StatusCodes.Status201Created, data = category });
             }
             catch (Exception ex)
             {
@@ -138,17 +140,17 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 if (category == null)
                 {
-                    return BadRequest(INVALID_DATA);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
                 _CategoryService.UpdateCategory(id, category);
 
-                return Ok(new { message = CATEGORY.SUCCES_UPDATING });
+                return Ok(new { status = StatusCodes.Status200OK, message = CATEGORY.SUCCESS_UPDATING });
             }
             catch (Exception ex)
             {
@@ -177,11 +179,11 @@ namespace Retetar.Controllers
             {
                 if (id <= 0)
                 {
-                    return BadRequest(INVALID_ID);
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
                 _CategoryService.DeleteCategory(id);
-                return Ok(new { message = CATEGORY.SUCCES_DELETING });
+                return Ok(new { status = StatusCodes.Status200OK, message = CATEGORY.SUCCESS_DELETING });
 
             }
             catch (Exception ex)
