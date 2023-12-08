@@ -1,4 +1,5 @@
-﻿using Retetar.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Retetar.Interfaces;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -139,6 +140,168 @@ namespace Retetar.Services
             catch (Exception ex)
             {
                 throw new Exception(string.Format(RECIPE.NOT_FOUND, id), ex);
+            }
+        }
+
+        /// <summary>
+        /// Calculates the maximum number of times a Recipe can be prepared based on available ingredients.
+        /// </summary>
+        /// <param name="recipeId">The identifier of the Recipe to calculate the amount for.</param>
+        /// <remarks>
+        /// This method computes the maximum number of times the specified Recipe can be prepared
+        /// considering the availability of required ingredients and their quantities in the inventory.
+        /// </remarks>
+        /// <returns>
+        /// Returns the maximum number of times the Recipe can be prepared with available ingredients.
+        /// Returns 0 if any ingredient is unavailable or expired.
+        /// </returns>
+        public int GetRecipeAmount(int recipeId)
+        {
+            try
+            {
+                var recipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == recipeId);
+
+                if (recipe == null)
+                {
+                    throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId));
+                }
+
+                var recipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == recipeId).ToList();
+
+                int maximumPossibleRecipes = int.MaxValue;
+
+                foreach (var recipeIngredient in recipeIngredients)
+                {
+                    var ingredientQuantities = _dbContext.IngredientQuantities.Where(iq => iq.IngredientId == recipeIngredient.IngredientId).ToList();
+                    double totalIngredientQuantity = 0;
+
+                    foreach (var ingredientQuantity in ingredientQuantities)
+                    {
+                        if (ingredientQuantity != null && ingredientQuantity.ExpiringDate > DateTime.Now)
+                        {
+                            totalIngredientQuantity += ingredientQuantity.Amount;
+                        }
+                    }
+
+                    if (totalIngredientQuantity == 0)
+                    {
+                        return 0; // Return 0 if any ingredient is unavailable
+                    }
+
+                    int possibleRecipesWithIngredient = (int)(totalIngredientQuantity / recipeIngredient.Quantity);
+                    maximumPossibleRecipes = Math.Min(maximumPossibleRecipes, possibleRecipesWithIngredient);
+                }
+
+                return maximumPossibleRecipes;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId), ex);
+            }
+        }
+
+        /// <summary>
+        /// Checks if the requested quantity of a recipe can be prepared based on available ingredient quantities.
+        /// If possible, reduces the ingredient quantities in the database accordingly.
+        /// </summary>
+        /// <param name="recipeId">The ID of the recipe to check.</param>
+        /// <param name="desiredQuantity">The desired quantity of the recipe to be prepared.</param>
+        /// <returns>
+        /// A tuple containing information:
+        ///   - First value (bool): Indicates if the requested quantity can be prepared.
+        ///   - Second value (double): The actual available quantity of the ingredient required for the recipe.
+        ///   - Third value (string): Name of the ingredient that is insufficient in quantity, if any.
+        /// </returns>
+        /// <exception cref="Exception">Thrown when an error occurs during the quantity check process.</exception>
+        public (bool, List<double>, List<string>) SubmitRecipeQuantity(int recipeId, double cantitateDorita)
+        {
+            try
+            {
+                var recipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == recipeId);
+
+                if (recipe == null)
+                {
+                    throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId));
+                }
+
+                var recipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == recipeId).ToList();
+
+                var ingredientLipsa = new List<string>();
+                var cantitateLipsa = new List<double>();
+
+                foreach (var recipeIngredient in recipeIngredients)
+                {
+                    var cantitateDeRedus = recipeIngredient.Quantity* cantitateDorita;
+                    var ingredientQuantities = _dbContext.IngredientQuantities
+                        .Where(iq => iq.IngredientId == recipeIngredient.IngredientId && iq.ExpiringDate > DateTime.Now)
+                        .OrderBy(iq => iq.Id) // Sortează după ID pentru a reduce cel mai vechi disponibil
+                        .ToList();
+
+                    double totalIngredientQuantity = ingredientQuantities.Sum(iq => iq.Amount);
+                    var unit = ingredientQuantities.FirstOrDefault()?.Unit ?? "";
+                    var cantitateMaxima = (int)(totalIngredientQuantity / cantitateDeRedus);
+
+                    if (totalIngredientQuantity == 0)
+                    {
+                        var ingredient = _dbContext.Ingredient.FirstOrDefault(r => r.Id == recipeIngredient.IngredientId);
+                        if (ingredient != null)
+                        {
+                            ingredientLipsa.Add( unit + " of " + ingredient.Name );
+                            cantitateLipsa.Add(cantitateDeRedus);
+                        }
+                    }
+                    else if (cantitateMaxima < cantitateDorita)
+                    {
+                        var ingredient = _dbContext.Ingredient.FirstOrDefault(r => r.Id == recipeIngredient.IngredientId);
+                        if (ingredient != null)
+                        {
+                            ingredientLipsa.Add(unit + " of " + ingredient.Name);
+                            cantitateLipsa.Add(cantitateDeRedus - totalIngredientQuantity);
+                        }
+                    }
+                    else
+                    {
+
+                        // Actualizează cantitățile disponibile ale ingredientelor din baza de date
+                        foreach (var ingredientQuantity in ingredientQuantities)
+                        {
+                            if (cantitateDeRedus > 0 && ingredientQuantity.Amount > 0)
+                            {
+
+                                if (cantitateDeRedus > ingredientQuantity.Amount)
+                                {
+                                    cantitateDeRedus -= ingredientQuantity.Amount;
+                                    _dbContext.IngredientQuantities.Remove(ingredientQuantity);
+                                }
+                                else
+                                {
+                                    ingredientQuantity.Amount -= cantitateDeRedus;
+                                    cantitateDeRedus = 0;
+                                    if (ingredientQuantity.Amount == 0)
+                                    {
+                                        _dbContext.IngredientQuantities.Remove(ingredientQuantity);
+                                    }
+                                    else
+                                    {
+                                        _dbContext.IngredientQuantities.Update(ingredientQuantity);
+                                    }
+                                }
+
+                            }
+                        }
+                    }
+                }
+
+                if (cantitateLipsa.Count() == 0 )
+                {
+                    _dbContext.SaveChanges();
+                }
+
+                return ((ingredientLipsa.Count()==0?true:false), cantitateLipsa, ingredientLipsa);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId), ex);
             }
         }
 

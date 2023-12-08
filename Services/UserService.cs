@@ -117,7 +117,7 @@ namespace Retetar.Services
         /// <param name="password">The password of the user.</param>
         /// <returns>The result of the user login operation.</returns>
         /// <exception cref="Exception">Thrown when there is an error authenticating the user.</exception>
-        public async Task<SignInResult> LoginUserAsync(string email, string password)
+        public async Task<string> LoginUserAsync(string email, string password)
         {
             try
             {
@@ -129,11 +129,19 @@ namespace Retetar.Services
                     var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
                     if (result == PasswordVerificationResult.Success)
                     {
-                        return await _signInManager.PasswordSignInAsync(user, password, false, lockoutOnFailure: false);
+                        await _signInManager.PasswordSignInAsync(user, password, false, lockoutOnFailure: false);
+
+                        // Generate JWT token
+                        var token = GenerateJwtToken(user);
+
+                        if (token != null)
+                        {
+                            return token;
+                        }
                     }
                 }
 
-                return SignInResult.Failed;
+                return null;
             }
             catch (Exception ex)
             {

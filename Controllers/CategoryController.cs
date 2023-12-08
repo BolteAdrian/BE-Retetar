@@ -40,7 +40,7 @@ namespace Retetar.Controllers
                     return NotFound(new { status = StatusCodes.Status404NotFound, message = CATEGORY.NOT_FOUND });
                 }
 
-                return Ok(new { status = StatusCodes.Status200OK, data = categories });
+                return Ok(new { status = StatusCodes.Status200OK, categories = categories });
             }
             catch (Exception ex)
             {

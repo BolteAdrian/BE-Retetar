@@ -166,9 +166,9 @@ namespace Retetar.Controllers
 
                 var result = await _userService.LoginUserAsync(model.Email, model.Password);
 
-                if (result.Succeeded)
+                if (result != null)
                 {
-                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN });
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN, Token = result });
                 }
 
                 return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_LOGIN });

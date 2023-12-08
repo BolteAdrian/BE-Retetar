@@ -83,6 +83,99 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
+        /// Retrieves the maximum number of times a Recipe can be prepared based on available ingredients.
+        /// </summary>
+        /// <param name="id">The identifier of the Recipe to calculate the amount for.</param>
+        /// <remarks>
+        /// This endpoint calculates the maximum number of times the specified Recipe can be prepared
+        /// considering the availability of required ingredients and their quantities in the inventory.
+        /// </remarks>
+        /// <returns>
+        /// Returns the maximum number of times the Recipe can be prepared with available ingredients.
+        /// If the Recipe does not exist or any error occurs during processing, appropriate HTTP responses are returned.
+        /// </returns>
+        [HttpGet("{id}/amount")]
+        public IActionResult GetRecipeAmount(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
+                }
+
+                var recipeAmount = _RecipeService.GetRecipeAmount(id);
+
+                if (recipeAmount < 0)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
+                }
+
+                return Ok(new { status = StatusCodes.Status200OK, recipeAmount });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Checks if the given quantity is available for the specified Recipe.
+        /// </summary>
+        /// <param name="id">The identifier of the Recipe to check.</param>
+        /// <param name="quantity">The quantity to be checked for availability.</param>
+        /// <remarks>
+        /// This endpoint checks if the provided quantity can be prepared for the specified Recipe
+        /// based on the availability of ingredients and their quantities.
+        /// </remarks>
+        /// <returns>
+        /// Returns an OK response with a message indicating the availability of the specified quantity
+        /// for the Recipe. If the quantity is available, it confirms the possibility of preparing the Recipe.
+        /// If there's not enough quantity available, it specifies the missing amount and ingredient.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("{id}/submit-amount")]
+        public IActionResult SubmitRecipeQuantity(int id, [FromBody] double quantity)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
+                }
+
+                var (available, missingQuantity, missingIngredient) = _RecipeService.SubmitRecipeQuantity(id, quantity);
+
+                if (available)
+                {
+                    return Ok(new { status = StatusCodes.Status200OK, message = "Quantity available for the recipe." });
+                }
+                else
+                {
+                    var missingIngredientsMessage = "Not enough quantity available for the recipe. Missing:";
+                    for (int i = 0; i < missingIngredient.Count(); i++)
+                    {
+                        missingIngredientsMessage += $" {missingQuantity[i]} {missingIngredient[i]}";
+                        if (i < missingIngredient.Count() - 1)
+                        {
+                            missingIngredientsMessage += ",";
+                        }
+                    }
+
+                    return Ok(new
+                    {
+                        status = StatusCodes.Status200OK,
+                        message = missingIngredientsMessage
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Adds a new Recipe to the database.
         /// </summary>
         /// <param name="recipe">The Recipe information to be added.</param>
