@@ -168,7 +168,7 @@ namespace Retetar.Controllers
 
                 if (result != null)
                 {
-                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN, Token = result });
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN, token = result.Token, userName = result.UserName });
                 }
 
                 return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_LOGIN });

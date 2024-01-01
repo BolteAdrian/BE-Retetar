@@ -6,6 +6,8 @@ using Retetar.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 using Retetar.Models;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,26 +18,44 @@ builder.Configuration.AddJsonFile("appsettings.json"); // Add this line to load 
 builder.Services.AddDbContext<RecipeDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));   //use this for SQL connection
 
-builder.Services.AddIdentity<User, IdentityRole>(options =>
-{
-    // Customize the Identity options as needed
-    options.User.AllowedUserNameCharacters = null;
-    options.User.RequireUniqueEmail = true;
-})
-    .AddEntityFrameworkStores<RecipeDbContext>()
-    .AddDefaultTokenProviders();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<RecipeService>();
+builder.Services.AddScoped<IngredientService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<IngredientQuantitiesService>();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+// For Identity  
+builder.Services.AddIdentity<User, IdentityRole>()
+                .AddEntityFrameworkStores<RecipeDbContext>()
+                .AddDefaultTokenProviders();
+// Adding Authentication  
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+
+// Adding Jwt Bearer  
+            .AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["JWTKey:ValidAudience"],
+                    ValidIssuer = builder.Configuration["JWTKey:ValidIssuer"],
+                    ClockSkew = TimeSpan.Zero,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWTKey:Secret"]))
+                };
+            });
+
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", builder =>
-    {
-        builder.WithOrigins("http://localhost:4200") // Replace with your Angular app URL
-               .AllowAnyMethod()
-               .AllowAnyHeader();
-    });
+    options.AddPolicy("AllowFrontend", builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 });
 
 builder.Services.AddAuthorization(options =>
@@ -46,12 +66,6 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<RecipeService>();
-builder.Services.AddScoped<IngredientService>();
-builder.Services.AddScoped<CategoryService>();
-builder.Services.AddScoped<IngredientQuantitiesService>();
-
 builder.Services.Configure<IEmailConfiguration>(builder.Configuration.GetSection("EmailConfiguration")); // Register EmailConfiguration
 builder.Services.AddTransient<IEmailSender, EmailSender>(); // Register EmailSender
 
@@ -61,7 +75,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.Configure<IJwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<IJwtOptions>(builder.Configuration.GetSection("JWTKey"));
 
 var app = builder.Build();
 
@@ -72,13 +86,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
-
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
+app.UseCors("AllowFrontend");
 
 app.MapControllers();
 

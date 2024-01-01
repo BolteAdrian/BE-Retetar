@@ -7,21 +7,18 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using static Retetar.Utils.Constants.ResponseConstants;
-using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace Retetar.Services
 {
     public class UserService
     {
         private readonly UserManager<User> _userManager;
-        private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailSender _emailSender;
 
-        public UserService(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, IEmailSender emailSender)
+        public UserService(UserManager<User> userManager, IConfiguration configuration, IEmailSender emailSender)
         {
             _userManager = userManager;
-            _signInManager = signInManager;
             _configuration = configuration;
             _emailSender = emailSender;
         }
@@ -111,42 +108,57 @@ namespace Retetar.Services
         }
 
         /// <summary>
-        /// Login a user asynchronously.
+        /// Authenticates a user asynchronously based on provided credentials.
         /// </summary>
         /// <param name="email">The email of the user.</param>
         /// <param name="password">The password of the user.</param>
-        /// <returns>The result of the user login operation.</returns>
-        /// <exception cref="Exception">Thrown when there is an error authenticating the user.</exception>
-        public async Task<string> LoginUserAsync(string email, string password)
+        /// <returns>The result of the user authentication process.</returns>
+        /// <exception cref="Exception">Thrown when there is an error during user authentication.</exception>
+        public async Task<IJwtAutResponse> LoginUserAsync(string email, string password)
         {
-            try
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                throw new Exception(string.Format(USER.NOT_FOUND));
+            if (!await _userManager.CheckPasswordAsync(user, password))
+                throw new Exception(string.Format(USER.NOT_FOUND));
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var authClaims = new List<Claim>
             {
-                var user = await _userManager.FindByEmailAsync(email);
-                if (user != null)
-                {
-                    // Ensure the provided password is hashed before using it for authentication
-                    var passwordHasher = new PasswordHasher<User>();
-                    var result = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
-                    if (result == PasswordVerificationResult.Success)
-                    {
-                        await _signInManager.PasswordSignInAsync(user, password, false, lockoutOnFailure: false);
+               new Claim(ClaimTypes.Name, user.UserName),
+               new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
 
-                        // Generate JWT token
-                        var token = GenerateJwtToken(user);
-
-                        if (token != null)
-                        {
-                            return token;
-                        }
-                    }
-                }
-
-                return null;
-            }
-            catch (Exception ex)
+            foreach (var userRole in userRoles)
             {
-                throw new Exception(UNKNOWN, ex);
+                authClaims.Add(new Claim(ClaimTypes.Role, userRole));
             }
+            string token = GenerateToken(authClaims);
+
+            return new IJwtAutResponse
+            {
+                Token = token,
+                UserName = user.UserName
+            };
+        }
+
+        private string GenerateToken(IEnumerable<Claim> claims)
+        {
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWTKey:Secret"]));
+            var _TokenExpiryTimeInHour = Convert.ToInt64(_configuration["JWTKey:TokenExpiryTimeInHour"]);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Issuer = _configuration["JWTKey:ValidIssuer"],
+                Audience = _configuration["JWTKey:ValidAudience"],
+                //Expires = DateTime.UtcNow.AddHours(_TokenExpiryTimeInHour),
+                Expires = DateTime.UtcNow.AddMinutes(1),
+                SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
+                Subject = new ClaimsIdentity(claims)
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
 
         /// <summary>
@@ -296,7 +308,7 @@ namespace Retetar.Services
         /// </summary>
         /// <param name="user">The User object for which to generate the token.</param>
         /// <returns>The generated JWT token as a string.</returns>
-        /// <exception cref="Exception">Thrown when there is an error generating the JWT token.</exception>
+        /// <exception cref = "Exception" > Thrown when there is an error generating the JWT token.</exception>
         public string GenerateJwtToken(User user)
         {
             try
@@ -306,20 +318,26 @@ namespace Retetar.Services
                     throw new ArgumentException("User or user email is null.");
                 }
 
-                var jwtKey = _configuration["Jwt:Key"];
-                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("Jwt key is null")));;
+                var jwtKey = _configuration["JWTKey:Secret"];
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("Jwt key is null")));
                 var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+               //Fetch user roles
+               var userRoles = _userManager.GetRolesAsync(user).Result; // Fetch roles synchronously for simplicity
+
                 var claims = new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                };
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+                //Add user roles as claims
+                claims.AddRange(userRoles.Select(role => new Claim("role", role)));
 
                 var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Issuer"],
+                    issuer: _configuration["JWTKey:ValidIssuer"],
+                    audience: _configuration["JWTKey:ValidAudience"],
                     claims: claims,
                     expires: DateTime.Now.AddMinutes(120),
                     signingCredentials: credentials);
@@ -331,6 +349,7 @@ namespace Retetar.Services
                 throw new Exception("Unknown Error!", ex);
             }
         }
+
 
         /// <summary>
         /// Sends a password reset email containing a reset link to the user's email address.
