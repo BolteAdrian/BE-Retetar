@@ -24,7 +24,7 @@ namespace Retetar.Services
         /// Returns a paginated list of Recipes if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<Recipe> GetAllRecipesPaginated(IPaginationAndSearchOptions options)
+        public async Task<List<Recipe>> GetAllRecipesPaginated(IPaginationAndSearchOptions options)
         {
             try
             {
@@ -46,6 +46,12 @@ namespace Retetar.Services
                     query = SortQuery(query, options.SortField, isAscending);
                 }
 
+                // Include RecipeCategories and RecipeIngredients
+                query = query.Include(r => r.RecipeCategories)
+                             .ThenInclude(rc => rc.Category)
+                             .Include(r => r.RecipeIngredients)
+                             .ThenInclude(ri => ri.Ingredient);
+
                 // Calculate the total number of records
                 int totalItems = query.Count();
 
@@ -54,7 +60,29 @@ namespace Retetar.Services
                 query = query.Skip(startIndex).Take(options.PageSize);
 
                 // Return the results and pagination information
-                return query.ToList();
+                var recipes = await query.ToListAsync();
+
+                // Procesați fiecare rețetă pentru a umple categoriile și ingredientele
+                foreach (var recipe in recipes)
+                {
+                    recipe.RecipeCategories = _dbContext.RecipeCategories
+                        .Where(rc => rc.RecipeId == recipe.Id)
+                        .Select(rc => new RecipeCategory
+                        {
+                            Category = _dbContext.Category.FirstOrDefault(c => c.Id == rc.CategoryId)
+                        })
+                        .ToList();
+
+                    recipe.RecipeIngredients = _dbContext.RecipeIngredients
+                        .Where(ri => ri.RecipeId == recipe.Id)
+                        .Select(ri => new RecipeIngredients
+                        {
+                            Ingredient = _dbContext.Ingredient.FirstOrDefault(i => i.Id == ri.IngredientId)
+                        })
+                        .ToList();
+                }
+
+                return recipes;
             }
             catch (Exception ex)
             {
@@ -92,50 +120,43 @@ namespace Retetar.Services
         /// If the Recipe with the specified ID is not found, throws an exception with an appropriate error message.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public RecipeDetails GetRecipeDetails(int id)
+        public async Task<Recipe> GetRecipeDetails(int id)
         {
             try
             {
-                var recipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == id);
+                var recipe = await _dbContext.Recipe
+                    .Include(r => r.RecipeCategories)
+                        .ThenInclude(rc => rc.Category)
+                    .Include(r => r.RecipeIngredients)
+                        .ThenInclude(ri => ri.Ingredient)
+                    .FirstOrDefaultAsync(r => r.Id == id);
 
                 if (recipe == null)
                 {
                     throw new Exception(string.Format(RECIPE.NOT_FOUND, id));
                 }
 
-                var RecipeCategories = _dbContext.RecipeCategories.Where(rc => rc.RecipeId == id).ToList();
-                var RecipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == id).ToList();
-
-                var Categories = _dbContext.RecipeCategories.Where(i => i.RecipeId == id).ToList();
-
-                foreach (var Category in Categories)
-                {
-                    var categoryEntity = _dbContext.Category.FirstOrDefault(c => c.Id == Category.CategoryId);
-                    if (categoryEntity != null)
+                // Umeaza aceleasi pasi ca in GetAllRecipesPaginated pentru a umple categoriile si ingredientele
+                recipe.RecipeCategories = _dbContext.RecipeCategories
+                    .Where(rc => rc.RecipeId == recipe.Id)
+                    .Select(rc => new RecipeCategory
                     {
-                        Category.Category= categoryEntity;
-                    }
-                }
+                        CategoryId = rc.CategoryId,
+                        Category = _dbContext.Category.FirstOrDefault(c => c.Id == rc.CategoryId)
+                    })
+                    .ToList();
 
-                var RecipeIngredientsList = _dbContext.RecipeIngredients.Where(i => i.RecipeId == id).ToList();
-
-                foreach (var RecipeIngredient in RecipeIngredientsList)
-                {
-                    var ingredientEntity = _dbContext.Ingredient.FirstOrDefault(i => i.Id == RecipeIngredient.IngredientId);
-                    if (ingredientEntity != null)
+                recipe.RecipeIngredients = _dbContext.RecipeIngredients
+                    .Where(ri => ri.RecipeId == recipe.Id)
+                    .Select(ri => new RecipeIngredients
                     {
-                        RecipeIngredient.Ingredient = ingredientEntity;
-                    }
-                }
+                        Quantity = ri.Quantity,
+                        Unit = ri.Unit,
+                        Ingredient = _dbContext.Ingredient.FirstOrDefault(i => i.Id == ri.IngredientId)
+                    })
+                    .ToList();
 
-                var recipeDetails = new RecipeDetails
-                {
-                    Recipe = recipe,
-                    Ingredients = RecipeIngredientsList,
-                    Categories = Categories
-                };
-
-                return recipeDetails;
+                return recipe;
             }
             catch (Exception ex)
             {
@@ -332,6 +353,7 @@ namespace Retetar.Services
                             RecipeId = recipe.Recipe.Id,
                             IngredientId = ingredient.IngredientId,
                             Quantity = ingredient.Quantity,
+                            Unit = ingredient.Unit,
                         };
 
                         _dbContext.RecipeIngredients.Add(recipeIngredient);
@@ -387,7 +409,9 @@ namespace Retetar.Services
 
                 existingRecipe.Name = updatedRecipe.Recipe.Name;
                 existingRecipe.Description = updatedRecipe.Recipe.Description;
+                existingRecipe.ShortDescription = updatedRecipe.Recipe.ShortDescription;
                 existingRecipe.CookingInstructions = updatedRecipe.Recipe.CookingInstructions;
+                existingRecipe.Picture = updatedRecipe.Recipe.Picture;
 
                 if (updatedRecipe.Ingredients != null)
                 {
@@ -415,7 +439,8 @@ namespace Retetar.Services
                         {
                             RecipeId = existingRecipe.Id,
                             IngredientId = ingredient.IngredientId,
-                            Quantity = ingredient.Quantity
+                            Quantity = ingredient.Quantity,
+                            Unit = ingredient.Unit,
                         });
                     }
                 }
@@ -428,7 +453,7 @@ namespace Retetar.Services
 
                     foreach (var existingCategory in existingRecipeCategories)
                     {
-                        if (!updatedRecipe.Categories.Contains(existingCategory.CategoryId))
+                        if (existingCategory.CategoryId != null && !updatedRecipe.Categories.Contains((int)existingCategory.CategoryId))
                         {
                             _dbContext.RecipeCategories.Remove(existingCategory);
                         }

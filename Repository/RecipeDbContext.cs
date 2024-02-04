@@ -38,7 +38,7 @@ namespace Retetar.Repository
             // Configuring relationships for RecipeCategory (many-to-many)
             modelBuilder.Entity<RecipeCategory>()
                 .HasOne(rc => rc.Recipe)
-                .WithMany()
+                .WithMany(r => r.RecipeCategories)
                 .HasForeignKey(rc => rc.RecipeId);
 
             modelBuilder.Entity<RecipeCategory>()
@@ -49,7 +49,7 @@ namespace Retetar.Repository
             // Configuring relationships for RecipeIngredient (many-to-many)
             modelBuilder.Entity<RecipeIngredients>()
                 .HasOne(ri => ri.Recipe)
-                .WithMany()
+                .WithMany(r => r.RecipeIngredients)
                 .HasForeignKey(ri => ri.RecipeId);
 
             modelBuilder.Entity<RecipeIngredients>()

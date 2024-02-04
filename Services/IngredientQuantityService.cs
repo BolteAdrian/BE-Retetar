@@ -1,4 +1,5 @@
-﻿using Retetar.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Retetar.Interfaces;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -22,7 +23,7 @@ namespace Retetar.Services
         /// Returns a paginated list of IngredientQuantitiess if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<IngredientQuantities> GetAllIngredientQuantitiessPaginated(IPaginationAndSearchOptions options)
+        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(IPaginationAndSearchOptions options)
         {
             try
             {
@@ -74,6 +75,36 @@ namespace Retetar.Services
                     return isAscending ? query.OrderBy(g => g.ExpiringDate) : query.OrderByDescending(g => g.ExpiringDate);
                 default:
                     return query; // If the sorting field does not exist or is not specified, return the unchanged query
+            }
+        }
+
+        /// <summary>
+        /// Retrieves all IngredientQuantities by ingredient unique identifier from the database.
+        /// </summary>
+        /// <param name="id">The unique identifier of the Ingredient.</param>
+        /// <returns>
+        /// Returns all the IngredientQuantities objects if found.
+        /// If the IngredientQuantities with the specified ingredient ID is not found, throws an exception with an appropriate error message.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public async Task<List<IngredientQuantities>> GetAllIngredientQuantitiesById(int id)
+        {
+            try
+            {
+                var ingredientQuantities = await _dbContext.IngredientQuantities
+                    .Where(g => g.IngredientId == id)
+                    .ToListAsync();
+
+                if (ingredientQuantities == null || ingredientQuantities.Count == 0)
+                {
+                    throw new Exception(string.Format(INGREDIENT.NOT_FOUND, id));
+                }
+
+                return ingredientQuantities;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(INGREDIENT.NOT_FOUND, id), ex);
             }
         }
 

@@ -29,13 +29,50 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllIngredientQuantitiessPaginated([FromQuery] IPaginationAndSearchOptions options)
+        public IActionResult GetAllIngredientQuantitiesPaginated([FromQuery] IPaginationAndSearchOptions options)
         {
             try
             {
-                var ingredientQuantities = _IngredientQuantitiesService.GetAllIngredientQuantitiessPaginated(options);
+                var ingredientQuantities = _IngredientQuantitiesService.GetAllIngredientQuantitiesPaginated(options);
 
                 if (ingredientQuantities != null && ingredientQuantities.Any())
+                {
+                    return Ok(new { status = StatusCodes.Status200OK, ingredientQuantities });
+                }
+                else
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a all IngredientQuantities by the ingredient unique identifier.
+        /// </summary>
+        /// <param name="id">The unique identifier of the Ingredient.</param>
+        /// <returns>
+        /// Returns all the IngredientQuantities's informations if found.
+        /// If the provided ID is invalid, returns a BadRequest response with an appropriate message.
+        /// If no IngredientQuantities is found with the ingredient ID, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("all/{id}")]
+        public IActionResult GetAllIngredientQuantitiesById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
+                }
+
+                var ingredientQuantities = _IngredientQuantitiesService.GetAllIngredientQuantitiesById(id);
+
+                if (ingredientQuantities != null)
                 {
                     return Ok(new { status = StatusCodes.Status200OK, ingredientQuantities });
                 }

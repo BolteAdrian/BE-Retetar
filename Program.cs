@@ -52,10 +52,9 @@ builder.Services.AddAuthentication(options =>
                 };
             });
 
-
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    options.AddPolicy("AllowFrontend", builder => builder.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod());
 });
 
 builder.Services.AddAuthorization(options =>

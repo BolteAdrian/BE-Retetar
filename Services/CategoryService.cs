@@ -1,4 +1,5 @@
-﻿using Retetar.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Retetar.Interfaces;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -85,6 +86,36 @@ namespace Retetar.Services
         /// <summary>
         /// Retrieves a Category by its unique identifier from the database.
         /// </summary>
+        /// <param name="IsRecipe">The identifier of the type of the Category.</param>
+        /// <returns>
+        /// Returns all the Categories of that type.
+        /// If no Category is found, throws an exception with an appropriate error message.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public async Task<List<Category>> GetCategoryByType(bool IsRecipe)
+        {
+            try
+            {
+                var categories = await _dbContext.Category
+                    .Where(g => g.IsRecipe == IsRecipe)
+                    .ToListAsync();
+
+                if (categories == null)
+                {
+                    throw new Exception(string.Format(CATEGORY.NOT_FOUND));
+                }
+
+                return categories;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(CATEGORY.NOT_FOUND), ex);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a Category by its unique identifier from the database.
+        /// </summary>
         /// <param name="id">The unique identifier of the Category.</param>
         /// <returns>
         /// Returns the Category object if found.
@@ -147,6 +178,9 @@ namespace Retetar.Services
 
                 existingCategory.Name = category.Name;
                 existingCategory.Description = category.Description;
+                existingCategory.ShortDescription = category.ShortDescription;
+                existingCategory.Picture = category.Picture;
+                existingCategory.IsRecipe = category.IsRecipe;
 
                 _dbContext.SaveChanges();
 

@@ -1,4 +1,5 @@
-﻿using Retetar.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+using Retetar.Interfaces;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -26,14 +27,15 @@ namespace Retetar.Services
         {
             try
             {
-                IQueryable<Ingredient> query = _dbContext.Ingredient.AsQueryable();
+                IQueryable<Ingredient> query = _dbContext.Ingredient
+                    .Include(i => i.Category); // Eager loading of the Category
 
                 // Apply search filters
                 if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
                     query = query.Where(g =>
-                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower)) 
+                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower))
                     );
                 }
 
@@ -147,6 +149,9 @@ namespace Retetar.Services
 
                 existingIngredient.Name = ingredient.Name;
                 existingIngredient.Description = ingredient.Description;
+                existingIngredient.ShortDescription = ingredient.ShortDescription;
+                existingIngredient.Picture = ingredient.Picture;
+                existingIngredient.CategoryId = ingredient.CategoryId;
 
                 _dbContext.SaveChanges();
 

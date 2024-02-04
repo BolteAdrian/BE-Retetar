@@ -33,12 +33,12 @@ namespace Retetar.Controllers
             {
                 var recipes = _RecipeService.GetAllRecipesPaginated(options);
 
-                if (recipes == null || !recipes.Any())
+                if (recipes == null)
                 {
                     return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
                 }
 
-                return Ok(new { status = StatusCodes.Status200OK, recipes });
+                return Ok(new { status = StatusCodes.Status200OK, recipes});
             }
             catch (Exception ex)
             {

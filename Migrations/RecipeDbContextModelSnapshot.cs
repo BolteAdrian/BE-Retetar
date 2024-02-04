@@ -155,7 +155,7 @@ namespace Retetar.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.Category", b =>
+            modelBuilder.Entity("Retetar.Models.Category", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -164,7 +164,6 @@ namespace Retetar.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsRecipe")
@@ -174,12 +173,18 @@ namespace Retetar.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Picture")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShortDescription")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Category");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.Ingredient", b =>
+            modelBuilder.Entity("Retetar.Models.Ingredient", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -187,15 +192,20 @@ namespace Retetar.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
+                    b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Picture")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShortDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -205,7 +215,7 @@ namespace Retetar.Migrations
                     b.ToTable("Ingredient");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.IngredientQuantity", b =>
+            modelBuilder.Entity("Retetar.Models.IngredientQuantities", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -236,7 +246,7 @@ namespace Retetar.Migrations
                     b.ToTable("IngredientQuantities");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.Recipe", b =>
+            modelBuilder.Entity("Retetar.Models.Recipe", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -245,15 +255,19 @@ namespace Retetar.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CookingInstructions")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Picture")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShortDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -261,7 +275,7 @@ namespace Retetar.Migrations
                     b.ToTable("Recipe");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.RecipeCategory", b =>
+            modelBuilder.Entity("Retetar.Models.RecipeCategory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -269,7 +283,7 @@ namespace Retetar.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
+                    b.Property<int?>("CategoryId")
                         .HasColumnType("int");
 
                     b.Property<int>("RecipeId")
@@ -284,7 +298,7 @@ namespace Retetar.Migrations
                     b.ToTable("RecipeCategories");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.RecipeIngredients", b =>
+            modelBuilder.Entity("Retetar.Models.RecipeIngredients", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -301,6 +315,10 @@ namespace Retetar.Migrations
                     b.Property<int?>("RecipeId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IngredientId");
@@ -310,7 +328,7 @@ namespace Retetar.Migrations
                     b.ToTable("RecipeIngredients");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.User", b =>
+            modelBuilder.Entity("Retetar.Models.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -386,7 +404,7 @@ namespace Retetar.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.User", null)
+                    b.HasOne("Retetar.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -395,7 +413,7 @@ namespace Retetar.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.User", null)
+                    b.HasOne("Retetar.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -410,7 +428,7 @@ namespace Retetar.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Retetar.Interfaces.User", null)
+                    b.HasOne("Retetar.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -419,27 +437,25 @@ namespace Retetar.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.User", null)
+                    b.HasOne("Retetar.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.Ingredient", b =>
+            modelBuilder.Entity("Retetar.Models.Ingredient", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.Category", "Category")
+                    b.HasOne("Retetar.Models.Category", "Category")
                         .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CategoryId");
 
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.IngredientQuantity", b =>
+            modelBuilder.Entity("Retetar.Models.IngredientQuantities", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.Ingredient", "Ingredient")
+                    b.HasOne("Retetar.Models.Ingredient", "Ingredient")
                         .WithMany()
                         .HasForeignKey("IngredientId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -448,15 +464,13 @@ namespace Retetar.Migrations
                     b.Navigation("Ingredient");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.RecipeCategory", b =>
+            modelBuilder.Entity("Retetar.Models.RecipeCategory", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.Category", "Category")
+                    b.HasOne("Retetar.Models.Category", "Category")
                         .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CategoryId");
 
-                    b.HasOne("Retetar.Interfaces.Recipe", "Recipe")
+                    b.HasOne("Retetar.Models.Recipe", "Recipe")
                         .WithMany()
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -467,13 +481,13 @@ namespace Retetar.Migrations
                     b.Navigation("Recipe");
                 });
 
-            modelBuilder.Entity("Retetar.Interfaces.RecipeIngredients", b =>
+            modelBuilder.Entity("Retetar.Models.RecipeIngredients", b =>
                 {
-                    b.HasOne("Retetar.Interfaces.Ingredient", "Ingredient")
+                    b.HasOne("Retetar.Models.Ingredient", "Ingredient")
                         .WithMany()
                         .HasForeignKey("IngredientId");
 
-                    b.HasOne("Retetar.Interfaces.Recipe", "Recipe")
+                    b.HasOne("Retetar.Models.Recipe", "Recipe")
                         .WithMany()
                         .HasForeignKey("RecipeId");
 

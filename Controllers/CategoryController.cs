@@ -51,6 +51,35 @@ namespace Retetar.Controllers
         /// <summary>
         /// Retrieves a Category by its unique identifier.
         /// </summary>
+        /// <param name="IsRecipe">The identifier of the type of the Category.</param>
+        /// <returns>
+        /// Returns the all the Category of that type.
+        /// If no Category is found, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("{IsRecipe}")]
+        public IActionResult GetCategoryByType(bool IsRecipe)
+        {
+            try
+            {
+                var category = _CategoryService.GetCategoryByType(IsRecipe);
+
+                if (category == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = CATEGORY.NOT_FOUND });
+                }
+
+                return Ok(new { status = StatusCodes.Status200OK, data = category });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = CATEGORY.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a Category by its unique identifier.
+        /// </summary>
         /// <param name="id">The unique identifier of the Category.</param>
         /// <returns>
         /// Returns the Category's information if found.
