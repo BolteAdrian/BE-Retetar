@@ -168,7 +168,7 @@ namespace Retetar.Controllers
 
                 if (result != null)
                 {
-                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN, token = result.Token, userName = result.UserName });
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.SUCCESS_LOGIN, token = result.Token, userName = result.UserName, id = result.UserId });
                 }
 
                 return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.ERROR_LOGIN });
@@ -234,7 +234,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpDelete("delete/{userId}")]
-        [Authorize]
+        [Authorize(Policy = "ManagerOnly")]
         public async Task<IActionResult> DeleteAccount(string userId)
         {
             try

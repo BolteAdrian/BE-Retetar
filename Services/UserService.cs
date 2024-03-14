@@ -138,7 +138,8 @@ namespace Retetar.Services
             return new IJwtAutResponse
             {
                 Token = token,
-                UserName = user.UserName
+                UserName = user.UserName,
+                UserId = user.Id
             };
         }
 

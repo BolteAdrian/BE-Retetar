@@ -28,12 +28,70 @@ namespace Retetar.Controllers
         /// If no Ingredients are found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
-        [HttpGet]
-        public IActionResult GetAllIngredientsPaginated([FromQuery] IPaginationAndSearchOptions options)
+        [HttpPost("search")]
+        [Authorize]
+        public IActionResult GetAllIngredientsPaginated([FromBody] IPaginationAndSearchOptions options)
         {
             try
             {
                 var ingredients = _IngredientService.GetAllIngredientsPaginated(options);
+
+                if (ingredients == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
+                return Ok(new { status = StatusCodes.Status200OK, ingredients });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients.
+        /// </summary>
+        /// <returns>
+        /// Returns a list of Ingredients if successful.
+        /// If no Ingredients are found, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet]
+        [Authorize]
+        public IActionResult GetAllIngredients()
+        {
+            try
+            {
+                var ingredients = _IngredientService.GetAllIngredients();
+
+                if (ingredients == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
+                return Ok(new { status = StatusCodes.Status200OK, ingredients });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients by category.
+        /// </summary>
+        /// <param name="id">The unique identifier of the category.</param>
+        /// <returns>
+        /// Returns a list of Ingredients if successful.
+        /// If no Ingredients are found, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("category/{id}")]
+        [Authorize]
+        public IActionResult GetAllIngredientsByCategory(int id)
+        {
+            try
+            {
+                var ingredients = _IngredientService.GetAllIngredientsByCategory(id);
 
                 if (ingredients == null)
                 {
@@ -58,6 +116,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}")]
+        [Authorize]
         public IActionResult GetIngredientById(int id)
         {
             try

@@ -29,7 +29,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllIngredientQuantitiesPaginated([FromQuery] IPaginationAndSearchOptions options)
+        public IActionResult GetAllIngredientQuantitiesPaginated([FromBody] IPaginationAndSearchOptions options)
         {
             try
             {

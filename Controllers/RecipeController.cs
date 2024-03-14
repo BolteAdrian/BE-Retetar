@@ -27,7 +27,8 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllRecipesPaginated([FromQuery] IPaginationAndSearchOptions options)
+        [Authorize]
+        public IActionResult GetAllRecipesPaginated([FromBody] IPaginationAndSearchOptions options)
         {
             try
             {
@@ -46,6 +47,35 @@ namespace Retetar.Controllers
             }
         }
 
+        /// <summary>
+        /// Retrieves a paginated list of Recipes by category.
+        /// </summary>
+        /// <param name="id">The unique identifier of the category.</param>
+        /// <returns>
+        /// Returns a list of Recipes by category if successful.
+        /// If no Recipes are found, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("category/{id}")]
+        [Authorize]
+        public IActionResult GetAllRecipesByCategory(int id)
+        {
+            try
+            {
+                var recipes = _RecipeService.GetAllRecipesByCategory(id);
+
+                if (recipes == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
+                }
+
+                return Ok(new { status = StatusCodes.Status200OK, recipes });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
+            }
+        }
 
         /// <summary>
         /// Retrieves Recipe details by its unique identifier.
@@ -58,6 +88,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}")]
+        [Authorize]
         public IActionResult GetRecipeDetails(int id)
         {
             try
@@ -95,6 +126,7 @@ namespace Retetar.Controllers
         /// If the Recipe does not exist or any error occurs during processing, appropriate HTTP responses are returned.
         /// </returns>
         [HttpGet("{id}/amount")]
+        [Authorize]
         public IActionResult GetRecipeAmount(int id)
         {
             try
@@ -135,6 +167,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}/submit-amount")]
+        [Authorize]
         public IActionResult SubmitRecipeQuantity(int id, [FromBody] double quantity)
         {
             try

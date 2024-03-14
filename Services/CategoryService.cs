@@ -178,7 +178,6 @@ namespace Retetar.Services
 
                 existingCategory.Name = category.Name;
                 existingCategory.Description = category.Description;
-                existingCategory.ShortDescription = category.ShortDescription;
                 existingCategory.Picture = category.Picture;
                 existingCategory.IsRecipe = category.IsRecipe;
 

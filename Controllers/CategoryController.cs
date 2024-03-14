@@ -29,7 +29,8 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllCategorysPaginated([FromQuery] IPaginationAndSearchOptions options)
+        [Authorize]
+        public IActionResult GetAllCategorysPaginated([FromBody] IPaginationAndSearchOptions options)
         {
             try
             {
@@ -57,7 +58,8 @@ namespace Retetar.Controllers
         /// If no Category is found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
-        [HttpGet("{IsRecipe}")]
+        [HttpGet("type/{IsRecipe}")]
+        [Authorize]
         public IActionResult GetCategoryByType(bool IsRecipe)
         {
             try
@@ -88,6 +90,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet("{id}")]
+        [Authorize]
         public IActionResult GetCategoryById(int id)
         {
             try

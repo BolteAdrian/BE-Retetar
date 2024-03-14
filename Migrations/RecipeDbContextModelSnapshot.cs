@@ -176,9 +176,6 @@ namespace Retetar.Migrations
                     b.Property<string>("Picture")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ShortDescription")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.ToTable("Category");
@@ -203,9 +200,6 @@ namespace Retetar.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Picture")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ShortDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -316,7 +310,6 @@ namespace Retetar.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Unit")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -471,7 +464,7 @@ namespace Retetar.Migrations
                         .HasForeignKey("CategoryId");
 
                     b.HasOne("Retetar.Models.Recipe", "Recipe")
-                        .WithMany()
+                        .WithMany("RecipeCategories")
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -488,12 +481,19 @@ namespace Retetar.Migrations
                         .HasForeignKey("IngredientId");
 
                     b.HasOne("Retetar.Models.Recipe", "Recipe")
-                        .WithMany()
+                        .WithMany("RecipeIngredients")
                         .HasForeignKey("RecipeId");
 
                     b.Navigation("Ingredient");
 
                     b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("Retetar.Models.Recipe", b =>
+                {
+                    b.Navigation("RecipeCategories");
+
+                    b.Navigation("RecipeIngredients");
                 });
 #pragma warning restore 612, 618
         }

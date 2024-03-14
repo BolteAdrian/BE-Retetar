@@ -28,7 +28,16 @@ namespace Retetar.Services
         {
             try
             {
-                IQueryable<Recipe> query = _dbContext.Recipe.AsQueryable();
+                IQueryable<Recipe> query = _dbContext.Recipe
+                    .Select(r => new Recipe
+                    {
+                        Id = r.Id,
+                        Name = r.Name,
+                        ShortDescription = r.ShortDescription,
+                        Picture = r.Picture,
+                        RecipeCategories = r.RecipeCategories,
+                        RecipeIngredients = r.RecipeIngredients
+                    });
 
                 // Apply search filters
                 if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
@@ -47,9 +56,9 @@ namespace Retetar.Services
                 }
 
                 // Include RecipeCategories and RecipeIngredients
-                query = query.Include(r => r.RecipeCategories)
+                query = query.Include(r => r.RecipeCategories!)
                              .ThenInclude(rc => rc.Category)
-                             .Include(r => r.RecipeIngredients)
+                             .Include(r => r.RecipeIngredients!)
                              .ThenInclude(ri => ri.Ingredient);
 
                 // Calculate the total number of records
@@ -112,6 +121,54 @@ namespace Retetar.Services
         }
 
         /// <summary>
+        /// Retrieves a paginated list of Recipes based on the provided category.
+        /// </summary>
+        /// <param name="id">The unique identifier of the category.</param>
+        /// <returns>
+        /// Returns a list of Recipes if successful.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public async Task<List<Recipe>> GetAllRecipesByCategory(int id)
+        {
+            try
+            {
+                var recipes = await _dbContext.Recipe
+                    .Include(r => r.RecipeCategories!)
+                        .ThenInclude(rc => rc.Category)
+                    .Include(r => r.RecipeIngredients!) // Add '!' to assert that it's not null
+                        .ThenInclude(ri => ri.Ingredient)
+                    .Where(r => r.RecipeCategories!.Any(rc => rc.CategoryId == id))
+                    .ToListAsync();
+
+                // Process each recipe to populate categories and ingredients
+                foreach (var recipe in recipes)
+                {
+                    recipe.RecipeCategories = _dbContext.RecipeCategories
+                        .Where(rc => rc.RecipeId == recipe.Id)
+                        .Select(rc => new RecipeCategory
+                        {
+                            Category = _dbContext.Category.FirstOrDefault(c => c.Id == rc.CategoryId)
+                        })
+                        .ToList()!;
+
+                    recipe.RecipeIngredients = _dbContext.RecipeIngredients
+                        .Where(ri => ri.RecipeId == recipe.Id)
+                        .Select(ri => new RecipeIngredients
+                        {
+                            Ingredient = _dbContext.Ingredient.FirstOrDefault(i => i.Id == ri.IngredientId)
+                        })
+                        .ToList()!;
+                }
+
+                return recipes;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Retrieves Recipe details by its unique identifier from the database.
         /// </summary>
         /// <param name="id">The unique identifier of the Recipe.</param>
@@ -125,9 +182,9 @@ namespace Retetar.Services
             try
             {
                 var recipe = await _dbContext.Recipe
-                    .Include(r => r.RecipeCategories)
+                    .Include(r => r.RecipeCategories!)
                         .ThenInclude(rc => rc.Category)
-                    .Include(r => r.RecipeIngredients)
+                    .Include(r => r.RecipeIngredients!)
                         .ThenInclude(ri => ri.Ingredient)
                     .FirstOrDefaultAsync(r => r.Id == id);
 

@@ -28,14 +28,15 @@ namespace Retetar.Services
             try
             {
                 IQueryable<Ingredient> query = _dbContext.Ingredient
-                    .Include(i => i.Category); // Eager loading of the Category
+               .Include(i => i.Category); // Include Category navigation property
 
                 // Apply search filters
                 if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
                     query = query.Where(g =>
-                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower))
+                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower) ||
+                                                      g.Category!.Name.ToLower().Contains(searchTermLower))
                     );
                 }
 
@@ -79,8 +80,62 @@ namespace Retetar.Services
             {
                 case "name":
                     return isAscending ? query.OrderBy(g => g.Name) : query.OrderByDescending(g => g.Name);
+                case "category":
+                    return isAscending ? query.OrderBy(g => g.Category!.Name) : query.OrderByDescending(g => g.Name);
                 default:
                     return query; // If the sorting field does not exist or is not specified, return the unchanged query
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients.
+        /// </summary>
+        /// <returns>
+        /// Returns a list of Ingredients if successful.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public IQueryable<Ingredient> GetAllIngredients()
+        {
+            try
+            {
+                IQueryable<Ingredient> ingredients = _dbContext.Ingredient
+                    .Include(i => i.Category);
+
+                if (ingredients == null)
+                {
+                    throw new Exception(string.Format(INGREDIENT.NOT_FOUND));
+                }
+                return ingredients;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(INGREDIENT.NOT_FOUND), ex);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients by category.
+        /// </summary>
+        /// <param name="id">The unique identifier of the Category.</param>
+        /// <returns>
+        /// Returns a list of Ingredients if successful.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public IQueryable<Ingredient> GetAllIngredientsByCategory(int id)
+        {
+            try
+            {
+                IQueryable<Ingredient> ingredients = _dbContext.Ingredient.Where(i => i.CategoryId == id);
+
+                if (ingredients == null)
+                {
+                    throw new Exception(string.Format(INGREDIENT.NOT_FOUND));
+                }
+                return ingredients;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(INGREDIENT.NOT_FOUND), ex);
             }
         }
 
@@ -149,7 +204,6 @@ namespace Retetar.Services
 
                 existingIngredient.Name = ingredient.Name;
                 existingIngredient.Description = ingredient.Description;
-                existingIngredient.ShortDescription = ingredient.ShortDescription;
                 existingIngredient.Picture = ingredient.Picture;
                 existingIngredient.CategoryId = ingredient.CategoryId;
 

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Retetar.Interfaces;
 using Retetar.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Identity.Web;
 using Retetar.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
