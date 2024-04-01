@@ -1,4 +1,4 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
     public interface IEmailSender
     {

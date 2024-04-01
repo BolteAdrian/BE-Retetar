@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -114,7 +114,7 @@ namespace Retetar.Services
         /// <param name="password">The password of the user.</param>
         /// <returns>The result of the user authentication process.</returns>
         /// <exception cref="Exception">Thrown when there is an error during user authentication.</exception>
-        public async Task<IJwtAutResponse> LoginUserAsync(string email, string password)
+        public async Task<JwtAutResponseDto> LoginUserAsync(string email, string password)
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
@@ -135,7 +135,7 @@ namespace Retetar.Services
             }
             string token = GenerateToken(authClaims);
 
-            return new IJwtAutResponse
+            return new JwtAutResponseDto
             {
                 Token = token,
                 UserName = user.UserName,

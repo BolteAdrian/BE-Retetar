@@ -6,7 +6,7 @@ namespace Retetar.Models
     {
         public int Id { get; set; }
         public double Quantity { get; set; }
-        public string? Unit { get; set; }
+        public string Unit { get; set; }
 
         [ForeignKey("Recipe")]
         public int? RecipeId { get; set; }

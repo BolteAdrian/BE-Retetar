@@ -12,8 +12,8 @@ using Retetar.Repository;
 namespace Retetar.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20240213165631_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20240326195146_AddRoles")]
+    partial class AddRoles
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -223,6 +223,10 @@ namespace Retetar.Migrations
                     b.Property<double>("Amount")
                         .HasColumnType("float");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("DateOfPurchase")
                         .HasColumnType("datetime2");
 
@@ -231,6 +235,9 @@ namespace Retetar.Migrations
 
                     b.Property<int>("IngredientId")
                         .HasColumnType("int");
+
+                    b.Property<double>("Price")
+                        .HasColumnType("float");
 
                     b.Property<string>("Unit")
                         .IsRequired()

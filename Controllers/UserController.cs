@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Services;
 using System.IdentityModel.Tokens.Jwt;
@@ -109,7 +109,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a 500 Internal Server Error response with an error message.
         /// </returns>
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] IUserAuth model)
+        public async Task<IActionResult> Register([FromBody] UserAuthDto model)
         {
             try
             {
@@ -155,7 +155,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a 500 Internal Server Error response with an error message.
         /// </returns>
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] IUserAuth model)
+        public async Task<IActionResult> Login([FromBody] UserAuthDto model)
         {
             try
             {
@@ -320,7 +320,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPut("update-password/{userId}")]
         [Authorize]
-        public async Task<IActionResult> UpdatePassword(string userId, [FromBody] IUpdatePassword model)
+        public async Task<IActionResult> UpdatePassword(string userId, [FromBody] UpdatePasswordDto model)
         {
             try
             {

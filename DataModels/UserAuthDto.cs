@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IUserAuth
+    public class UserAuthDto
     {
         public string? UserName { get; set; }
         public string Email { get; set; }

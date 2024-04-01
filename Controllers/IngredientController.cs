@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Services;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -30,7 +30,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPost("search")]
         [Authorize]
-        public IActionResult GetAllIngredientsPaginated([FromBody] IPaginationAndSearchOptions options)
+        public IActionResult GetAllIngredientsPaginated([FromBody] PaginationAndSearchOptionsDto options)
         {
             try
             {

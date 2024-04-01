@@ -1,8 +1,8 @@
 ﻿using Retetar.Models;
 
-namespace Retetar.Interfaces
+namespace Retetar.DataModels
 {
-    public class RecipeEditor
+    public class RecipeEditorDto
     {
         public Recipe Recipe { get; set; }
         public List<RecipeIngredients>? Ingredients { get; set; }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -23,7 +23,7 @@ namespace Retetar.Services
         /// Returns a paginated list of Categorys if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<Category> GetAllCategorysPaginated(IPaginationAndSearchOptions options)
+        public List<Category> GetAllCategorysPaginated(PaginationAndSearchOptionsDto options)
         {
             try
             {
@@ -204,6 +204,42 @@ namespace Retetar.Services
                 if (category == null)
                 {
                     throw new Exception(string.Format(CATEGORY.NOT_FOUND, id));
+                }
+
+                if (category.IsRecipe == true)
+                {
+
+                    // We select all records in the link table that have the specified category for deletion
+                    var recipeCategories = _dbContext.RecipeCategories.Where(rc => rc.CategoryId == id).ToList();
+
+                    // We remove these records from the link table
+                    _dbContext.RecipeCategories.RemoveRange(recipeCategories);
+
+                    // We check recipes that have no associated category after deleting the category
+                    var recipesWithoutCategory = _dbContext.Recipe
+                        .Include(r => r.RecipeCategories)
+                        .Where(r => r.RecipeCategories == null || !r.RecipeCategories.Any())
+                        .ToList();
+
+                    // We add the special category "Uncategorized" (with id 1) for these recipes
+                    foreach (var recipe in recipesWithoutCategory)
+                    {
+                        if (recipe.RecipeCategories == null)
+                        {
+                            recipe.RecipeCategories = new List<RecipeCategory>(); // Inițializează lista dacă este nulă
+                        }
+                        recipe.RecipeCategories.Add(new RecipeCategory { CategoryId = 1, RecipeId = recipe.Id });
+                    }
+                }
+                else
+                {
+
+                    var ingredientCategories = _dbContext.Ingredient.Where(rc => rc.CategoryId == id).ToList();
+                    // All the ingredients of the removed category will be now in the NO CATEGORY group
+                    foreach (var ingredient in ingredientCategories)
+                    {
+                        ingredient.CategoryId = 2;
+                    }
                 }
 
                 _dbContext.Category.Remove(category);

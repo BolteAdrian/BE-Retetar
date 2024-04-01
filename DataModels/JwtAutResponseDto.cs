@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IJwtAutResponse
+    public class JwtAutResponseDto
     {
         public string Token { get; set; }
         public string UserName { get; set; }

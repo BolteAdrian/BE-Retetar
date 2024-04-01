@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IJwtOptions
+    public class JwtOptionsDto
     {
         public string ValidAudience { get; set; }
         public string ValidIssuer { get; set; }

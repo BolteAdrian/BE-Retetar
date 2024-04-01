@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Services;
 using static Retetar.Utils.Constants.ResponseConstants;
 
@@ -28,7 +28,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpGet]
         [Authorize]
-        public IActionResult GetAllRecipesPaginated([FromBody] IPaginationAndSearchOptions options)
+        public IActionResult GetAllRecipesPaginated([FromBody] PaginationAndSearchOptionsDto options)
         {
             try
             {
@@ -138,11 +138,6 @@ namespace Retetar.Controllers
 
                 var recipeAmount = _RecipeService.GetRecipeAmount(id);
 
-                if (recipeAmount < 0)
-                {
-                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.NOT_FOUND });
-                }
-
                 return Ok(new { status = StatusCodes.Status200OK, recipeAmount });
             }
             catch (Exception ex)
@@ -166,7 +161,7 @@ namespace Retetar.Controllers
         /// If there's not enough quantity available, it specifies the missing amount and ingredient.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
-        [HttpGet("{id}/submit-amount")]
+        [HttpPost("{id}/submit-amount")]
         [Authorize]
         public IActionResult SubmitRecipeQuantity(int id, [FromBody] double quantity)
         {
@@ -197,7 +192,7 @@ namespace Retetar.Controllers
 
                     return Ok(new
                     {
-                        status = StatusCodes.Status200OK,
+                        status = StatusCodes.Status400BadRequest,
                         message = missingIngredientsMessage
                     });
                 }
@@ -222,7 +217,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPost]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult AddRecipe([FromBody] RecipeEditor recipe)
+        public IActionResult AddRecipe([FromBody] RecipeEditorDto recipe)
         {
             try
             {
@@ -260,7 +255,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPut("{id}")]
         [Authorize(Policy = "ManagerOnly")]
-        public IActionResult UpdateRecipe(int id, [FromBody] RecipeEditor recipe)
+        public IActionResult UpdateRecipe(int id, [FromBody] RecipeEditorDto recipe)
         {
             try
             {

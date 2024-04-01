@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Retetar.Repository;
 using Microsoft.EntityFrameworkCore;
-using Retetar.Interfaces;
 using Retetar.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Retetar.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Retetar.DataModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,7 +64,7 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
-builder.Services.Configure<IEmailConfiguration>(builder.Configuration.GetSection("EmailConfiguration")); // Register EmailConfiguration
+builder.Services.Configure<EmailConfigurationDto>(builder.Configuration.GetSection("EmailConfiguration")); // Register EmailConfiguration
 builder.Services.AddTransient<IEmailSender, EmailSender>(); // Register EmailSender
 
 builder.Services.AddControllers();
@@ -73,7 +73,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.Configure<IJwtOptions>(builder.Configuration.GetSection("JWTKey"));
+builder.Services.Configure<JwtOptionsDto>(builder.Configuration.GetSection("JWTKey"));
 
 var app = builder.Build();
 

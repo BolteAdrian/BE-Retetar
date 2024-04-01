@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Repository;
+using Retetar.Utils.Methods;
 using static Retetar.Utils.Constants.ResponseConstants;
 
 namespace Retetar.Services
@@ -24,7 +25,7 @@ namespace Retetar.Services
         /// Returns a paginated list of Recipes if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public async Task<List<Recipe>> GetAllRecipesPaginated(IPaginationAndSearchOptions options)
+        public async Task<List<Recipe>> GetAllRecipesPaginated(PaginationAndSearchOptionsDto options)
         {
             try
             {
@@ -71,7 +72,7 @@ namespace Retetar.Services
                 // Return the results and pagination information
                 var recipes = await query.ToListAsync();
 
-                // Procesați fiecare rețetă pentru a umple categoriile și ingredientele
+                // Process each recipe to complete the categories and ingredients
                 foreach (var recipe in recipes)
                 {
                     recipe.RecipeCategories = _dbContext.RecipeCategories
@@ -193,7 +194,7 @@ namespace Retetar.Services
                     throw new Exception(string.Format(RECIPE.NOT_FOUND, id));
                 }
 
-                // Umeaza aceleasi pasi ca in GetAllRecipesPaginated pentru a umple categoriile si ingredientele
+                // Follow the same steps as in Get AllRecipes Paginated to fill in the categories and ingredients
                 recipe.RecipeCategories = _dbContext.RecipeCategories
                     .Where(rc => rc.RecipeId == recipe.Id)
                     .Select(rc => new RecipeCategory
@@ -222,18 +223,21 @@ namespace Retetar.Services
         }
 
         /// <summary>
-        /// Calculates the maximum number of times a Recipe can be prepared based on available ingredients.
+        /// Calculates the maximum number of times a Recipe can be prepared based on available ingredients and their quantities.
         /// </summary>
         /// <param name="recipeId">The identifier of the Recipe to calculate the amount for.</param>
         /// <remarks>
         /// This method computes the maximum number of times the specified Recipe can be prepared
-        /// considering the availability of required ingredients and their quantities in the inventory.
+        /// considering the availability and quantity of required ingredients in the inventory.
         /// </remarks>
         /// <returns>
-        /// Returns the maximum number of times the Recipe can be prepared with available ingredients.
+        /// Returns an object containing information about the Recipe amount including:
+        /// - MaximumPossibleRecipes: The maximum number of times the Recipe can be prepared with available ingredients.
+        /// - PriceAllRecipes: The total price of all recipes that can be prepared with available ingredients.
+        /// - PriceUnitRecipe: The average price per recipe considering the available ingredients.
         /// Returns 0 if any ingredient is unavailable or expired.
         /// </returns>
-        public int GetRecipeAmount(int recipeId)
+        public async Task<IRecipeAmount> GetRecipeAmount(int recipeId)
         {
             try
             {
@@ -248,29 +252,62 @@ namespace Retetar.Services
 
                 int maximumPossibleRecipes = int.MaxValue;
 
+                // Adding an instance of the CurrencyConverter class
+                CurrencyConverter converter = new CurrencyConverter();
+                double totalIngredientsPrice = 0; // Total price of the ingredients for the current recipe
+
+                // Iterating over each ingredient in the recipe
                 foreach (var recipeIngredient in recipeIngredients)
                 {
                     var ingredientQuantities = _dbContext.IngredientQuantities.Where(iq => iq.IngredientId == recipeIngredient.IngredientId).ToList();
                     double totalIngredientQuantity = 0;
+                    double averageQuantityPrice = 0;
 
+                    // Iterating over each quantity of the ingredient
                     foreach (var ingredientQuantity in ingredientQuantities)
                     {
                         if (ingredientQuantity != null && ingredientQuantity.ExpiringDate > DateTime.Now)
                         {
-                            totalIngredientQuantity += ingredientQuantity.Amount;
+                            double ingredientQuantityUsed = Math.Min(recipeIngredient.Quantity, ingredientQuantity.Amount);
+
+                            // Converting quantity to standard unit if necessary
+                            if (ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml")
+                            {
+                                totalIngredientQuantity += ingredientQuantityUsed / 1000;
+                            }
+                            else
+                            {
+                                totalIngredientQuantity += ingredientQuantityUsed;
+                            }
+
+                            // Checking if the ingredient's currency matches the specified currency or needs conversion
+                            double ingredientPriceInCurrency = ingredientQuantity.Currency == "RON" ?
+                                ingredientQuantity.Price : // No conversion needed
+                                await converter.ConvertCurrency(ingredientQuantity.Price, ingredientQuantity.Currency);
+
+                            // Adding the adjusted price for the used quantity to the total price of the ingredient for the current recipe
+                            averageQuantityPrice += ingredientPriceInCurrency * ingredientQuantityUsed;
                         }
                     }
 
-                    if (totalIngredientQuantity == 0)
-                    {
-                        return 0; // Return 0 if any ingredient is unavailable
-                    }
-
+                    // Calculating the maximum possible recipes with the current ingredient
                     int possibleRecipesWithIngredient = (int)(totalIngredientQuantity / recipeIngredient.Quantity);
                     maximumPossibleRecipes = Math.Min(maximumPossibleRecipes, possibleRecipesWithIngredient);
+
+                    if (maximumPossibleRecipes != 0)
+                    {
+                        // Adding the adjusted price per ingredient
+                        totalIngredientsPrice += averageQuantityPrice/ totalIngredientQuantity;
+                    }
+
                 }
 
-                return maximumPossibleRecipes;
+                return new IRecipeAmount
+                {
+                    MaximumPossibleRecipes = maximumPossibleRecipes,
+                    PriceAllRecipes = maximumPossibleRecipes != 0 ? Math.Round(totalIngredientsPrice, 2):0,
+                    PriceUnitRecipe = maximumPossibleRecipes != 0 ? Math.Round(totalIngredientsPrice / maximumPossibleRecipes, 2) : 0
+                };
             }
             catch (Exception ex)
             {
@@ -309,15 +346,54 @@ namespace Retetar.Services
 
                 foreach (var recipeIngredient in recipeIngredients)
                 {
-                    var cantitateDeRedus = recipeIngredient.Quantity* cantitateDorita;
+                    // We convert the desired quantity into kilograms or liters, depending on the unit of measure specified for the ingredient
+                    double cantitateDeRedus;
+                    switch (recipeIngredient.Unit.ToLower())
+                    {
+                        case "g":
+                        case "ml":
+                            cantitateDeRedus = (recipeIngredient.Quantity / 1000) * cantitateDorita; // Convertim în kilograme/litri
+                            break;
+                        default:
+                            cantitateDeRedus = recipeIngredient.Quantity * cantitateDorita; // Păstrăm cantitatea așa cum este
+                            break;
+                    }
+
                     var ingredientQuantities = _dbContext.IngredientQuantities
                         .Where(iq => iq.IngredientId == recipeIngredient.IngredientId && iq.ExpiringDate > DateTime.Now)
-                        .OrderBy(iq => iq.Id) // Sortează după ID pentru a reduce cel mai vechi disponibil
+                        .OrderBy(iq => iq.Id) // Sort by ID to reduce oldest available
                         .ToList();
 
-                    double totalIngredientQuantity = ingredientQuantities.Sum(iq => iq.Amount);
+                    // We calculate the total amount of available quantities, taking into account the unit of measure
+                    double totalIngredientQuantity = 0;
+                    foreach (var ingredientQuantity in ingredientQuantities)
+                    {
+                        // We convert the available quantity into the same unit as the desired quantity
+                        double availableAmountInDefaultUnit = ingredientQuantity.Amount;
+                        switch (ingredientQuantity.Unit.ToLower())
+                        {
+                            case "g":
+                                availableAmountInDefaultUnit /= 1000; // We convert grams to kilograms
+                                break;
+                            case "ml":
+                                availableAmountInDefaultUnit /= 1000; // Convert milliliters to liters
+                                break;
+                        }
+                        totalIngredientQuantity += availableAmountInDefaultUnit;
+                    }
+
                     var unit = ingredientQuantities.FirstOrDefault()?.Unit ?? "";
                     var cantitateMaxima = (int)(totalIngredientQuantity / cantitateDeRedus);
+
+                    if(unit == "g")
+                    {
+                        unit = "Kg";
+                    }
+
+                    if (unit == "ml")
+                    {
+                        unit = "L";
+                    }
 
                     if (totalIngredientQuantity == 0)
                     {
@@ -340,7 +416,7 @@ namespace Retetar.Services
                     else
                     {
 
-                        // Actualizează cantitățile disponibile ale ingredientelor din baza de date
+                        // Updates the available quantities of ingredients in the database
                         foreach (var ingredientQuantity in ingredientQuantities)
                         {
                             if (cantitateDeRedus > 0 && ingredientQuantity.Amount > 0)
@@ -389,7 +465,7 @@ namespace Retetar.Services
         /// <param name="recipe">The RecipeEditor object to be added.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Recipe object is null.</exception>
         /// <exception cref="Exception">Thrown when an error occurs during saving the Recipe to the database.</exception>
-        public void AddRecipe(RecipeEditor recipe)
+        public void AddRecipe(RecipeEditorDto recipe)
         {
             try
             {
@@ -448,7 +524,7 @@ namespace Retetar.Services
         /// <param name="updatedRecipe">The Recipe object containing the updated data.</param>
         /// <exception cref="ArgumentNullException">Thrown when the Recipe object is null.</exception>
         /// <exception cref="Exception">Thrown when the Recipe with the specified ID is not found or an error occurs during updating.</exception>
-        public RecipeEditor UpdateRecipe(int id, RecipeEditor updatedRecipe)
+        public RecipeEditorDto UpdateRecipe(int id, RecipeEditorDto updatedRecipe)
         {
             try
             {

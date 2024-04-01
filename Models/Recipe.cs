@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace Retetar.Models
+﻿namespace Retetar.Models
 {
     public class Recipe
     {

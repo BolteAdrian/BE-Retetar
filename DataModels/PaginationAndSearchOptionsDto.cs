@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IPaginationAndSearchOptions
+    public class PaginationAndSearchOptionsDto
     {
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;

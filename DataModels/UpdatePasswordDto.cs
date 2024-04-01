@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IUpdatePassword
+    public class UpdatePasswordDto
     {
         public string CurrentPassword { get; set; }
         public string NewPassword { get; set; }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -23,7 +23,7 @@ namespace Retetar.Services
         /// Returns a paginated list of Ingredients if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<Ingredient> GetAllIngredientsPaginated(IPaginationAndSearchOptions options)
+        public List<Ingredient> GetAllIngredientsPaginated(PaginationAndSearchOptionsDto options)
         {
             try
             {

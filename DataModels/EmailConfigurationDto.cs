@@ -1,6 +1,6 @@
-﻿namespace Retetar.Interfaces
+﻿namespace Retetar.DataModels
 {
-    public class IEmailConfiguration
+    public class EmailConfigurationDto
     {
         public string SmtpServer { get; set; }
         public int SmtpPort { get; set; }

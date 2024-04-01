@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using static Retetar.Utils.Constants.ResponseConstants;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using MailKit.Net.Smtp;
 using MimeKit;
 
@@ -8,9 +8,9 @@ namespace Retetar.Services
 {
     public class EmailSender : IEmailSender
     {
-        private readonly IEmailConfiguration _emailConfig;
+        private readonly EmailConfigurationDto _emailConfig;
 
-        public EmailSender(IOptions<IEmailConfiguration> emailConfig)
+        public EmailSender(IOptions<EmailConfigurationDto> emailConfig)
         {
             _emailConfig = emailConfig?.Value ?? throw new ArgumentNullException(nameof(emailConfig), EMAIL.CONFIG_NULL);
         }

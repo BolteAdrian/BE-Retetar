@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Retetar.Interfaces;
+using Retetar.DataModels;
 using Retetar.Models;
 using Retetar.Repository;
 using static Retetar.Utils.Constants.ResponseConstants;
@@ -23,7 +23,7 @@ namespace Retetar.Services
         /// Returns a paginated list of IngredientQuantitiess if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(IPaginationAndSearchOptions options)
+        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(PaginationAndSearchOptionsDto options)
         {
             try
             {
@@ -175,6 +175,8 @@ namespace Retetar.Services
                 existingIngredientQuantities.ExpiringDate = ingredientQuantities.ExpiringDate;
                 existingIngredientQuantities.Unit = ingredientQuantities.Unit;
                 existingIngredientQuantities.DateOfPurchase = ingredientQuantities.DateOfPurchase;
+                existingIngredientQuantities.Price = ingredientQuantities.Price;
+                existingIngredientQuantities.Currency = ingredientQuantities.Currency;
 
                 _dbContext.SaveChanges();
 
