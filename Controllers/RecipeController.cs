@@ -114,6 +114,37 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
+        /// Retrieves the history of prepared recipes.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint retrieves the history of prepared recipes, including details such as when they were prepared and by whom.
+        /// </remarks>
+        /// <returns>
+        /// Returns the history of prepared recipes.
+        /// If there is no history available or any error occurs during processing, appropriate HTTP responses are returned.
+        /// </returns>
+        [HttpGet("prepared-recipes")]
+        [Authorize]
+        public IActionResult GetPreparedRecipeHistory()
+        {
+            try
+            {
+                var result = _RecipeService.GetPreparedRecipeHistory();
+
+                if (result == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = RECIPE.ERROR_GETTING_HISTORY });
+                }
+
+                return Ok(new { status = StatusCodes.Status200OK, result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Retrieves the maximum number of times a Recipe can be prepared based on available ingredients.
         /// </summary>
         /// <param name="id">The identifier of the Recipe to calculate the amount for.</param>
@@ -163,7 +194,7 @@ namespace Retetar.Controllers
         /// </returns>
         [HttpPost("{id}/submit-amount")]
         [Authorize]
-        public IActionResult SubmitRecipeQuantity(int id, [FromBody] double quantity)
+        public IActionResult SubmitRecipeQuantity(int id, [FromBody] int quantity)
         {
             try
             {

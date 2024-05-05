@@ -20,13 +20,15 @@ namespace Retetar.Controllers
 
         private readonly SignInManager<User> _signInManager;
         private readonly UserService _userService;
+        private readonly IEmailSender _emailService;
         private readonly IConfiguration _configuration;
 
-        public UserController(SignInManager<User> signInManager, UserService userService, IConfiguration configuration)
+        public UserController(SignInManager<User> signInManager, UserService userService, IConfiguration configuration, IEmailSender emailService)
         {
             _signInManager = signInManager;
             _userService = userService;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         /// <summary>
@@ -140,6 +142,113 @@ namespace Retetar.Controllers
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = USER.ERROR_REGISTER, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Sets the application settings.
+        /// </summary>
+        /// <param name="settings">The new settings to be applied.</param>
+        /// <returns>
+        /// Returns a response indicating the result of the settings update process.
+        /// If successful, returns a 200 OK response with a success message.
+        /// If the provided settings data is invalid or null, returns a 400 Bad Request response with the error details.
+        /// If the settings update process fails, returns a 500 Internal Server Error response with an error message.
+        /// </returns>
+        [HttpPut("settings")]
+        public Task<IActionResult> SetSettings([FromBody] Settings settings)
+        {
+            try
+            {
+                if (settings == null)
+                {
+                    return Task.FromResult<IActionResult>(BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA }));
+                }
+
+                 _userService.SetSettings(settings);
+
+                    return Task.FromResult<IActionResult>(Ok(new { status = StatusCodes.Status200OK, message = USER.SETTINGS_UPDATED }));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<IActionResult>(StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message, error = ex }));
+            }
+        }
+
+        /// <summary>
+        /// Gets the application settings.
+        /// </summary>
+        /// <returns>
+        /// Returns a response containing the application settings.
+        /// If the settings are found, returns a 200 OK response with the settings data.
+        /// If the settings are not found, returns a 400 Bad Request response with an error message.
+        /// If an error occurs during processing, returns a 500 Internal Server Error response with an error message.
+        [HttpGet("settings")]
+        public Task<IActionResult> GetSettings()
+        {
+            try
+            {
+                var result = _userService.GetSettings();
+
+                if (result != null)
+                {
+                    return Task.FromResult<IActionResult>(Ok(new { status = StatusCodes.Status200OK, result }));
+                }
+
+                return Task.FromResult<IActionResult>(BadRequest(new { status = StatusCodes.Status400BadRequest, errors = USER.ERROR_GETTING_SETTINGS }));
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult<IActionResult>(StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message, error = ex }));
+            }
+        }
+
+        /// <summary>
+        /// Sends an email.
+        /// </summary>
+        /// <param name="emailData">The email data including recipient email, subject, and message body.</param>
+        /// <returns>
+        /// Returns an HTTP response indicating the result of the email sending process.
+        /// If successful, returns a 200 OK response with a success message.
+        /// If the provided email data is invalid (null email) or missing, returns a 400 Bad Request response with an error message.
+        /// If the email sending process fails, returns a 400 Bad Request response with the error details.
+        /// If an unexpected error occurs during processing, returns a 500 Internal Server Error response with an error message.
+        /// </returns>
+        [HttpPost("email")]
+        public async Task<IActionResult> SendEmail()
+        {
+            try
+            {
+                string email = Request.Form["Email"];
+                string subject = Request.Form["Subject"];
+                string message = Request.Form["Message"];
+                var attachment = Request.Form.Files["Attachment"]; // Assuming attachment is a file
+
+                if (email == null)
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
+                }
+
+                if (subject == null)
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
+                }
+
+                // Validate email, subject, and other parameters if necessary
+
+                var result = await _emailService.SendEmailAsync(email, subject, message, attachment);
+
+
+                if (result != null)
+                {
+                    return Ok(new { status = StatusCodes.Status200OK, message = USER.EMAIL_SEND_SUCCESSFFULY });
+                }
+
+                return BadRequest(new { status = StatusCodes.Status400BadRequest, errors = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message, error = ex });
             }
         }
 

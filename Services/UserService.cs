@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Retetar.DataModels;
 using Retetar.Models;
+using Retetar.Repository;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -15,12 +16,13 @@ namespace Retetar.Services
         private readonly UserManager<User> _userManager;
         private readonly IConfiguration _configuration;
         private readonly IEmailSender _emailSender;
-
-        public UserService(UserManager<User> userManager, IConfiguration configuration, IEmailSender emailSender)
+        private readonly RecipeDbContext _dbContext;
+        public UserService(UserManager<User> userManager, IConfiguration configuration, IEmailSender emailSender, RecipeDbContext dbContext)
         {
             _userManager = userManager;
             _configuration = configuration;
             _emailSender = emailSender;
+            _dbContext = dbContext;
         }
 
         /// <summary>
@@ -104,6 +106,59 @@ namespace Retetar.Services
             catch (Exception ex)
             {
                 throw new Exception(USER.NOT_SAVED, ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets the application settings.
+        /// </summary>
+        /// <returns>The application settings.</returns>
+        /// <exception cref="Exception">Thrown when there is an error while retrieving the settings.</exception>
+        public Settings GetSettings()
+        {
+            try
+            {
+                var existingSettings = _dbContext.Settings.FirstOrDefault();
+
+                if (existingSettings == null)
+                {
+                    throw new Exception(string.Format(USER.ERROR_UPDATING_SETTINGS));
+                }
+                return existingSettings;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(USER.NOT_FOUND), ex);
+            }
+        }
+
+
+        /// <summary>
+        /// Updates the application settings.
+        /// </summary>
+        /// <param name="settings">The new settings to be applied.</param>
+        /// <exception cref="Exception">Thrown when there is an error while updating the settings.</exception>
+        public void SetSettings(Settings settings)
+        {
+            try
+            {
+                var existingSettings = _dbContext.Settings.FirstOrDefault();
+
+                if (existingSettings == null)
+                {
+                    throw new Exception(string.Format(USER.ERROR_UPDATING_SETTINGS));
+                }
+
+                existingSettings.Currency = settings.Currency;
+                existingSettings.Language = settings.Language;
+                existingSettings.NightMode = settings.NightMode;
+
+                _dbContext.SaveChanges();
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(USER.ERROR_UPDATING_SETTINGS), ex);
             }
         }
 
@@ -364,7 +419,7 @@ namespace Retetar.Services
             {
                 var resetUrl = GetResetPasswordUrl(email, resetPasswordToken);
                 var emailMessage = $"Please click the link below to reset your password: <br>{resetUrl}";
-                await _emailSender.SendEmailAsync(email, "Reset Password", emailMessage);
+                await _emailSender.SendEmailAsync(email, "Reset Password", emailMessage,null);
             }
             catch (Exception ex)
             {

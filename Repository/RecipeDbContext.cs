@@ -13,6 +13,8 @@ namespace Retetar.Repository
         public DbSet<RecipeCategory> RecipeCategories { get; set; }
         public DbSet<RecipeIngredients> RecipeIngredients { get; set; }
         public DbSet<IngredientQuantities> IngredientQuantities { get; set; }
+        public DbSet<PreparedRecipeHistory> PreparedRecipeHistory { get; set; }
+        public DbSet<Settings> Settings { get; set; }
 
         public RecipeDbContext(DbContextOptions<RecipeDbContext> options)
             : base(options)
@@ -56,6 +58,12 @@ namespace Retetar.Repository
                 .HasOne(ri => ri.Ingredient)
                 .WithMany()
                 .HasForeignKey(ri => ri.IngredientId);
+
+            // Configure relationship for PreparedRecipeHistory - Recipe (one-to-many)
+            modelBuilder.Entity<PreparedRecipeHistory>()
+                .HasOne(prh => prh.Recipe)
+                .WithMany()
+                .HasForeignKey(prh => prh.RecipeId);
         }
     }
 }

@@ -29,7 +29,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllIngredientQuantitiesPaginated([FromBody] PaginationAndSearchOptionsDto options)
+        public IActionResult GetAllIngredientQuantitiesPaginated([FromBody] QuantitiesSearchOptionsDto options)
         {
             try
             {
@@ -51,11 +51,11 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Retrieves a all IngredientQuantities by the ingredient unique identifier.
+        /// Retrieves a all IngredientQuantities that are not used by the ingredient unique identifier.
         /// </summary>
         /// <param name="id">The unique identifier of the Ingredient.</param>
         /// <returns>
-        /// Returns all the IngredientQuantities's informations if found.
+        /// Returns all the IngredientQuantities's informations that are not used if found.
         /// If the provided ID is invalid, returns a BadRequest response with an appropriate message.
         /// If no IngredientQuantities is found with the ingredient ID, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.

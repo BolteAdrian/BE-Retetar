@@ -11,11 +11,11 @@ using Retetar.DataModels;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configuration
-builder.Configuration.AddJsonFile("appsettings.json"); // Add this line to load appsettings.json
+builder.Configuration.AddJsonFile("appsettings.json");
 
 // Add services to the container.
 builder.Services.AddDbContext<RecipeDbContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));   //use this for SQL connection
+options.UseSqlServer(builder.Configuration.GetConnectionString("Default"))); //use this for local SQL connection
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RecipeService>();

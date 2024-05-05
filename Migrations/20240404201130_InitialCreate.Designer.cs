@@ -12,8 +12,8 @@ using Retetar.Repository;
 namespace Retetar.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20240326195146_AddRoles")]
-    partial class AddRoles
+    [Migration("20240404201130_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -243,11 +243,35 @@ namespace Retetar.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("Used")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IngredientId");
 
                     b.ToTable("IngredientQuantities");
+                });
+
+            modelBuilder.Entity("Retetar.Models.PreparedRecipeHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecipeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipeId");
+
+                    b.ToTable("PreparedRecipeHistory");
                 });
 
             modelBuilder.Entity("Retetar.Models.Recipe", b =>
@@ -320,6 +344,7 @@ namespace Retetar.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Unit")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -329,6 +354,30 @@ namespace Retetar.Migrations
                     b.HasIndex("RecipeId");
 
                     b.ToTable("RecipeIngredients");
+                });
+
+            modelBuilder.Entity("Retetar.Models.Settings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("NightMode")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Settings");
                 });
 
             modelBuilder.Entity("Retetar.Models.User", b =>
@@ -465,6 +514,17 @@ namespace Retetar.Migrations
                         .IsRequired();
 
                     b.Navigation("Ingredient");
+                });
+
+            modelBuilder.Entity("Retetar.Models.PreparedRecipeHistory", b =>
+                {
+                    b.HasOne("Retetar.Models.Recipe", "Recipe")
+                        .WithMany()
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipe");
                 });
 
             modelBuilder.Entity("Retetar.Models.RecipeCategory", b =>

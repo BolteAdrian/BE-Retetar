@@ -84,6 +84,21 @@ namespace Retetar.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Settings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    NightMode = table.Column<bool>(type: "bit", nullable: false),
+                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Language = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Settings", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -211,6 +226,26 @@ namespace Retetar.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PreparedRecipeHistory",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Amount = table.Column<int>(type: "int", nullable: false),
+                    RecipeId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PreparedRecipeHistory", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PreparedRecipeHistory_Recipe_RecipeId",
+                        column: x => x.RecipeId,
+                        principalTable: "Recipe",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RecipeCategories",
                 columns: table => new
                 {
@@ -247,6 +282,7 @@ namespace Retetar.Migrations
                     Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ExpiringDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DateOfPurchase = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Used = table.Column<bool>(type: "bit", nullable: false),
                     IngredientId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -267,7 +303,7 @@ namespace Retetar.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Quantity = table.Column<double>(type: "float", nullable: false),
-                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Unit = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RecipeId = table.Column<int>(type: "int", nullable: true),
                     IngredientId = table.Column<int>(type: "int", nullable: true)
                 },
@@ -336,6 +372,11 @@ namespace Retetar.Migrations
                 column: "IngredientId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PreparedRecipeHistory_RecipeId",
+                table: "PreparedRecipeHistory",
+                column: "RecipeId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RecipeCategories_CategoryId",
                 table: "RecipeCategories",
                 column: "CategoryId");
@@ -378,10 +419,16 @@ namespace Retetar.Migrations
                 name: "IngredientQuantities");
 
             migrationBuilder.DropTable(
+                name: "PreparedRecipeHistory");
+
+            migrationBuilder.DropTable(
                 name: "RecipeCategories");
 
             migrationBuilder.DropTable(
                 name: "RecipeIngredients");
+
+            migrationBuilder.DropTable(
+                name: "Settings");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

@@ -23,11 +23,11 @@ namespace Retetar.Services
         /// Returns a paginated list of IngredientQuantitiess if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(PaginationAndSearchOptionsDto options)
+        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(QuantitiesSearchOptionsDto options)
         {
             try
             {
-                IQueryable<IngredientQuantities> query = (IQueryable<IngredientQuantities>)_dbContext.IngredientQuantities.AsQueryable();
+                IQueryable<IngredientQuantities> query = _dbContext.IngredientQuantities.AsQueryable().Where(q=> q.Used == options.Used);
 
                 // Sorting
                 if (!string.IsNullOrEmpty(options.SortField))
@@ -79,11 +79,11 @@ namespace Retetar.Services
         }
 
         /// <summary>
-        /// Retrieves all IngredientQuantities by ingredient unique identifier from the database.
+        /// Retrieves all IngredientQuantities that are not used by ingredient unique identifier from the database.
         /// </summary>
         /// <param name="id">The unique identifier of the Ingredient.</param>
         /// <returns>
-        /// Returns all the IngredientQuantities objects if found.
+        /// Returns all the IngredientQuantities objects that are not used if found.
         /// If the IngredientQuantities with the specified ingredient ID is not found, throws an exception with an appropriate error message.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
@@ -92,7 +92,7 @@ namespace Retetar.Services
             try
             {
                 var ingredientQuantities = await _dbContext.IngredientQuantities
-                    .Where(g => g.IngredientId == id)
+                    .Where(g => g.IngredientId == id && g.Used == false)
                     .ToListAsync();
 
                 if (ingredientQuantities == null || ingredientQuantities.Count == 0)

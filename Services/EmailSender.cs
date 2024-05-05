@@ -23,7 +23,7 @@ namespace Retetar.Services
         /// <param name="message">The body of the email.</param>
         /// <exception cref="ArgumentNullException">Thrown when the 'email' parameter is null or empty.</exception>
         /// <exception cref="Exception">Thrown when there is an error sending the email.</exception>
-        public async Task SendEmailAsync(string email, string subject, string message)
+        public async Task<string> SendEmailAsync(string email, string subject, string message, IFormFile? attachment)
         {
             if (string.IsNullOrEmpty(email))
             {
@@ -39,13 +39,32 @@ namespace Retetar.Services
 
                 var bodyBuilder = new BodyBuilder();
                 bodyBuilder.HtmlBody = message;
+                if (attachment != null)
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        await attachment.CopyToAsync(memoryStream);
+                        memoryStream.Position = 0; // Reset stream position to start
+
+                        // Convert stream content to byte array
+                        var attachmentBytes = memoryStream.ToArray();
+
+                        // Determine the MIME type of the attachment
+                        var contentType = attachment.ContentType;
+
+                        // Add attachment to body builder with correct MIME type
+                        bodyBuilder.Attachments.Add(attachment.Name, attachmentBytes, ContentType.Parse(contentType));
+                    }
+                }
                 emailMessage.Body = bodyBuilder.ToMessageBody();
 
                 using var smtpClient = new SmtpClient();
                 smtpClient.Connect(_emailConfig.SmtpServer, _emailConfig.SmtpPort, MailKit.Security.SecureSocketOptions.StartTls);
                 smtpClient.Authenticate(_emailConfig.SmtpUsername, _emailConfig.SmtpPassword);
-                await smtpClient.SendAsync(emailMessage);
+                var result = await smtpClient.SendAsync(emailMessage);
                 smtpClient.Disconnect(true);
+
+                return result;
             }
             catch (Exception ex)
             {

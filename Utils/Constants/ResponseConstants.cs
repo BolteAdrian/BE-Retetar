@@ -25,6 +25,7 @@
             public const string ERROR_DELETING = "Could not delete the Recipe!";
             public const string SUCCESS_UPDATING = "Recipe updated successfully!";
             public const string SUCCESS_DELETING = "Recipe deleted successfully!";
+            public const string ERROR_GETTING_HISTORY = "Could not get the prepared recipes history!";
         }
 
         public static class CATEGORY
@@ -61,6 +62,10 @@
             public const string CHANGE_ROLE = " User role changed successfully!";
             public const string ALREADY_HAS_THE_ROLE = "User already has the requested role!";
             public const string ERROR_CHANGE_ROLE = "Error changing user role!";
+            public const string EMAIL_SEND_SUCCESSFFULY = "The email was send with success!";
+            public const string SETTINGS_UPDATED = "The settings were updated successfully!";
+            public const string ERROR_UPDATING_SETTINGS = "Could not update the settings!";
+            public const string ERROR_GETTING_SETTINGS = "Could not get the settings!";
         }
 
         public static class EMAIL

@@ -11,6 +11,7 @@ namespace Retetar.Models
         public string Currency { get; set; }
         public DateTime ExpiringDate { get; set; }
         public DateTime DateOfPurchase { get; set; }
+        public bool Used { get; set; } = false;
 
         [ForeignKey("Ingredient")]
         public int IngredientId { get; set; }
