@@ -154,6 +154,25 @@ namespace Retetar.Services
         }
 
         /// <summary>
+        /// Adds a new set of IngredientQuantities to the database.
+        /// </summary>
+        /// <param name="ingredientQuantities">The array of IngredientQuantities to be added.</param>
+        /// <exception cref="ArgumentNullException">Thrown when the array of IngredientQuantities is null.</exception>
+        /// <exception cref="Exception">Thrown when an error occurs during saving the IngredientQuantities to the database.</exception>
+        public void ImportIngredientQuantities(IEnumerable<IngredientQuantities> ingredientQuantities)
+        {
+            try
+            {
+                _dbContext.IngredientQuantities.AddRange(ingredientQuantities);
+                _dbContext.SaveChanges();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(INGREDIENT.NOT_SAVED, ex);
+            }
+        }
+
+        /// <summary>
         /// Updates an existing IngredientQuantities in the database.
         /// </summary>
         /// <param name="id">The ID of the IngredientQuantities to be updated.</param>

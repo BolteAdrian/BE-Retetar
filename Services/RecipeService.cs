@@ -494,7 +494,8 @@ namespace Retetar.Services
                     PreparedRecipeHistory preparedRecipe = new PreparedRecipeHistory
                     {
                         Amount = cantitateDorita,
-                        RecipeId = recipeId
+                        RecipeId = recipeId,
+                        PreparationDate = DateTime.Now
                     };
                     _dbContext.PreparedRecipeHistory.AddAsync(preparedRecipe);
                     _dbContext.SaveChanges();

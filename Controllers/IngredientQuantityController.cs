@@ -158,6 +158,40 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
+        /// Adds a new set of IngredientQuantities to the database.
+        /// </summary>
+        /// <param name="ingredientQuantities">The array of IngredientQuantities to be added.</param>
+        /// <remarks>
+        /// This endpoint requires the user to have the "ManagerOnly" authorization policy.
+        /// </remarks>
+        /// <returns>
+        /// Returns an OK response if successful.
+        /// If the provided IngredientQuantities data is invalid, returns a BadRequest response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpPost("import")]
+        [Authorize(Policy = "ManagerOnly")]
+        public IActionResult ImportIngredientQuantities([FromBody] IEnumerable<IngredientQuantities> ingredientQuantities)
+        {
+            try
+            {
+                if (ingredientQuantities == null || !ingredientQuantities.Any())
+                {
+                    return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
+                }
+
+                _IngredientQuantitiesService.ImportIngredientQuantities(ingredientQuantities);
+
+                // Choose an appropriate way to provide an HTTP response, such as returning OK.
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_SAVED, error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Updates an existing IngredientQuantities's information in the database.
         /// </summary>
         /// <param name="id">The ID of the IngredientQuantities to be updated.</param>

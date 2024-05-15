@@ -6,6 +6,7 @@ namespace Retetar.Models
     {
         public int Id { get; set; }
         public int Amount { get; set; }
+        public DateTime PreparationDate { get; set; }
 
         [ForeignKey("Recipe")]
         public int RecipeId { get; set; }

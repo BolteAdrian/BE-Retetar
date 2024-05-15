@@ -12,7 +12,7 @@ using Retetar.Repository;
 namespace Retetar.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20240404201130_InitialCreate")]
+    [Migration("20240514195849_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -263,6 +263,9 @@ namespace Retetar.Migrations
 
                     b.Property<int>("Amount")
                         .HasColumnType("int");
+
+                    b.Property<DateTime>("PreparationDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("RecipeId")
                         .HasColumnType("int");

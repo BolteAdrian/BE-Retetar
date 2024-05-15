@@ -261,6 +261,9 @@ namespace Retetar.Migrations
                     b.Property<int>("Amount")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("PreparationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("RecipeId")
                         .HasColumnType("int");
 
