@@ -4,6 +4,7 @@ using Retetar.Models;
 using Retetar.Repository;
 using Retetar.Utils.Methods;
 using static Retetar.DataModels.PreparedRecipesAndIngredientsDto;
+using static Retetar.MLModel;
 using static Retetar.Utils.Constants.ResponseConstants;
 
 namespace Retetar.Services
@@ -262,6 +263,63 @@ namespace Retetar.Services
             catch (Exception ex)
             {
                 throw new Exception(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the historical data of prepared recipes and generates predictions for the next year.
+        /// </summary>
+        /// <remarks>
+        /// This method fetches the historical data of prepared recipes from the database,
+        /// including details such as the amount prepared and the date of preparation.
+        /// It then uses an ML.NET model to predict the amount that will be prepared in the next year based on historical data.
+        /// </remarks>
+        /// <returns>
+        /// Returns a list of prepared recipes along with their predicted amounts for the next year.
+        /// If there is no historical data available or any error occurs during processing, appropriate exceptions are thrown.
+        /// </returns>
+        public async Task<IEnumerable<object>> GetPreparedRecipesWithPredictions()
+        {
+            try
+            {
+                // Obțineți anul curent
+                int currentYear = DateTime.Now.Year;
+
+                // Obține datele istorice din baza de date
+                var preparedRecipes = await _dbContext.PreparedRecipeHistory
+                    .Include(r => r.Recipe)
+                    .Select(r => new
+                    {
+                        Id = r.Id,
+                        Amount = r.Amount,
+                        RecipeId = r.RecipeId,
+                        RecipeName = r.Recipe.Name,
+                        PreparationDate = new DateTime(currentYear, r.PreparationDate.Month, r.PreparationDate.Day)
+                    })
+                    .ToListAsync();
+
+                // Generați predicții pentru anul următor
+                var predictedData = preparedRecipes.Select(data => new
+                {
+                    data.Id,
+                    data.Amount,
+                    data.RecipeId,
+                    RecipeName = data.RecipeName,
+                    data.PreparationDate,
+                    PredictedAmount = MLModel.Predict(new ModelInput
+                    {
+                        Id = data.Id,
+                        Amount = data.Amount,
+                        RecipeId = data.RecipeId,
+                        PreparationDate = data.PreparationDate
+                    }).Score
+                }).ToList();
+
+                return predictedData;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error occurred while generating predictions.", ex);
             }
         }
 

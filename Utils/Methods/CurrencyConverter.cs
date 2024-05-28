@@ -5,20 +5,24 @@ namespace Retetar.Utils.Methods
     public class CurrencyConverter
     {
         private Dictionary<string, double> exchangeRatesCache = new Dictionary<string, double>();
+        private DateTime lastSuccessfulUpdate;
         private Timer timer;
+        private readonly int retryCount = 3;
+        private readonly TimeSpan cacheDuration = TimeSpan.FromMinutes(10); // durata de valabilitate a cache-ului
 
         public CurrencyConverter()
         {
             // Pornim un timer care va actualiza automat ratele de schimb din 10 în 10 minute
             timer = new Timer(UpdateExchangeRates, null, TimeSpan.Zero, TimeSpan.FromMinutes(10));
+            lastSuccessfulUpdate = DateTime.MinValue; // inițial nu avem nicio actualizare reușită
         }
 
         public async Task<double> ConvertCurrency(double amount, string baseCurrency)
         {
             try
             {
-                // Verificăm dacă avem deja rata de schimb în cache
-                if (exchangeRatesCache.ContainsKey(baseCurrency))
+                // Verificăm dacă avem deja rata de schimb în cache și dacă cache-ul este valid
+                if (exchangeRatesCache.ContainsKey(baseCurrency) && (DateTime.Now - lastSuccessfulUpdate) < cacheDuration)
                 {
                     var baseRate = exchangeRatesCache[baseCurrency];
                     // Calculăm convertirea din moneda de bază în RON
@@ -26,39 +30,18 @@ namespace Retetar.Utils.Methods
                     return convertedAmount;
                 }
 
-                // Dacă nu există în cache, facem o solicitare către serverul BNR
-                using (var client = new HttpClient())
+                // Încearcă să obții ratele de schimb
+                await FetchExchangeRates();
+
+                if (exchangeRatesCache.ContainsKey(baseCurrency))
                 {
-                    var response = await client.GetAsync("https://www.bnr.ro/nbrfxrates.xml");
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var content = await response.Content.ReadAsStringAsync();
-                        var xmlDoc = XDocument.Parse(content);
-
-                        XNamespace ns = xmlDoc.Root.GetDefaultNamespace();
-                        var cubeNode = xmlDoc.Descendants(ns + "Cube").FirstOrDefault();
-
-                        // Obținem rata de schimb de bază (în raport cu RON)
-                        var baseRateNode = cubeNode.Elements(ns + "Rate")
-                                                    .FirstOrDefault(e => e.Attribute("currency")?.Value == baseCurrency);
-                        if (baseRateNode == null)
-                        {
-                            throw new Exception("Base currency not found in rates.");
-                        }
-                        var baseRate = double.Parse(baseRateNode.Value);
-
-                        // Salvăm rata de schimb în cache
-                        exchangeRatesCache[baseCurrency] = baseRate;
-
-                        // Calculăm convertirea din moneda de bază în RON
-                        var convertedAmount = amount * baseRate;
-                        return convertedAmount;
-                    }
-                    else
-                    {
-                        throw new Exception("Failed to fetch exchange rates from BNR.");
-                    }
+                    var baseRate = exchangeRatesCache[baseCurrency];
+                    var convertedAmount = amount * baseRate;
+                    return convertedAmount;
+                }
+                else
+                {
+                    throw new Exception("Base currency not found in rates after fetching.");
                 }
             }
             catch (Exception ex)
@@ -69,38 +52,54 @@ namespace Retetar.Utils.Methods
 
         private async void UpdateExchangeRates(object state)
         {
-            try
+            await FetchExchangeRates();
+        }
+
+        private async Task FetchExchangeRates()
+        {
+            for (int i = 0; i < retryCount; i++)
             {
-                // Facem o solicitare către serverul BNR pentru a actualiza ratele de schimb
-                using (var client = new HttpClient())
+                try
                 {
-                    var response = await client.GetAsync("https://www.bnr.ro/nbrfxrates.xml");
-
-                    if (response.IsSuccessStatusCode)
+                    using (var client = new HttpClient())
                     {
-                        var content = await response.Content.ReadAsStringAsync();
-                        var xmlDoc = XDocument.Parse(content);
+                        var response = await client.GetAsync("https://www.bnr.ro/nbrfxrates.xml");
 
-                        XNamespace ns = xmlDoc.Root.GetDefaultNamespace();
-                        var cubeNode = xmlDoc.Descendants(ns + "Cube").FirstOrDefault();
-
-                        // Actualizăm cache-ul cu noile rate de schimb
-                        foreach (var rateNode in cubeNode.Elements(ns + "Rate"))
+                        if (response.IsSuccessStatusCode)
                         {
-                            var currency = rateNode.Attribute("currency")?.Value;
-                            var rate = double.Parse(rateNode.Value);
-                            exchangeRatesCache[currency] = rate;
+                            var content = await response.Content.ReadAsStringAsync();
+                            var xmlDoc = XDocument.Parse(content);
+
+                            XNamespace ns = xmlDoc.Root.GetDefaultNamespace();
+                            var cubeNode = xmlDoc.Descendants(ns + "Cube").FirstOrDefault();
+
+                            // Actualizăm cache-ul cu noile rate de schimb
+                            foreach (var rateNode in cubeNode.Elements(ns + "Rate"))
+                            {
+                                var currency = rateNode.Attribute("currency")?.Value;
+                                var rate = double.Parse(rateNode.Value);
+                                exchangeRatesCache[currency] = rate;
+                            }
+
+                            // Actualizăm timpul ultimei actualizări reușite
+                            lastSuccessfulUpdate = DateTime.Now;
+                            Console.WriteLine("Exchange rates updated successfully.");
+                            return;
+                        }
+                        else
+                        {
+                            throw new Exception("Failed to fetch exchange rates from BNR.");
                         }
                     }
-                    else
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Attempt {i + 1} failed: {ex.Message}");
+                    if (i == retryCount - 1)
                     {
-                        throw new Exception("Failed to fetch exchange rates from BNR.");
+                        Console.WriteLine("All attempts to update exchange rates failed.");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Failed to update exchange rates: " + ex.Message);
             }
         }
     }

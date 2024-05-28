@@ -466,16 +466,16 @@ namespace Retetar.Controllers
         /// If the password reset email sending process fails, returns a 500 Internal Server Error response with an error message.
         /// </returns>
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] ResetPasswordDto resetData)
         {
             try
             {
-                if (email == null)
+                if (resetData.Email == null)
                 {
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_EMAIL });
                 }
 
-                var user = await _userService.GetUserByEmail(email);
+                var user = await _userService.GetUserByEmail(resetData.Email);
 
                 if (user == null)
                 {
@@ -489,7 +489,7 @@ namespace Retetar.Controllers
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
                 }
 
-                await _userService.SendPasswordResetEmail(email, resetPasswordToken);
+                await _userService.SendPasswordResetEmail(resetData.Email, resetPasswordToken);
 
                 return Ok(new { status = StatusCodes.Status200OK, message = USER.RESET_EMAIL_SEND });
             }
@@ -515,18 +515,18 @@ namespace Retetar.Controllers
         /// If the password reset process is successful, returns a success message.
         /// If an error occurs during the password reset process, returns a success message.
         /// </returns>
-        [HttpPost("reset-password/{email}/{token}")]
-        public async Task<IActionResult> ResetPassword(string email, string token, [FromBody] string newPassword)
+        [HttpPost("reset-password/{token}")]
+        public async Task<IActionResult> ResetPassword(string token, [FromBody] ResetPasswordDto resetData)
         {
             try
             {
-                if (email == null)
+                if (resetData.Email == null)
                 {
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_EMAIL });
                 }
 
                 // Check the validity of the JWT token
-                var user = await _userService.GetUserByEmail(email);
+                var user = await _userService.GetUserByEmail(resetData.Email);
 
                 if (user == null)
                 {
@@ -535,14 +535,14 @@ namespace Retetar.Controllers
 
                 // Validate the received JWT token
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var jwtKey = _configuration["Jwt:Key"];
+                var jwtKey = _configuration["JWTKey:Secret"];
                 var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey ?? throw new InvalidOperationException("Jwt key is null")));
                 var tokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = securityKey,
                     ValidateIssuer = true,
-                    ValidIssuer = _configuration["Jwt:Issuer"],
+                    ValidIssuer = _configuration["JWTKey:ValidIssuer"],
                     ValidateAudience = false,
                     ValidateLifetime = true
                 };
@@ -561,7 +561,7 @@ namespace Retetar.Controllers
                 // Check if the email in the token matches the user's email
                 var emailClaim = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress");
 
-                if (emailClaim == null || emailClaim.Value != email)
+                if (emailClaim == null || emailClaim.Value != resetData.Email)
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
 
                 var tokenValidTo = claimsPrincipal.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp)?.Value;
@@ -570,7 +570,7 @@ namespace Retetar.Controllers
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = USER.INVALID_TOKEN });
                 }
 
-                var resetPasswordResult = await _userService.ResetPasswordAsync(user, token, newPassword);
+                var resetPasswordResult = await _userService.ResetPasswordAsync(user, token, resetData.NewPassword);
                 if (resetPasswordResult.Succeeded)
                 {
                     // Password reset was successful

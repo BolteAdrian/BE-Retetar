@@ -145,6 +145,45 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
+        /// Retrieves predictions of prepared recipes for the next year.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint retrieves the history of prepared recipes, including details such as the amount prepared and the date of preparation.
+        /// Additionally, it uses an ML.NET model to predict the amount that will be prepared in the next year based on historical data.
+        /// </remarks>
+        /// <returns>
+        /// Returns a list of prepared recipes along with their predicted amounts for the next year.
+        /// If there is no history available or any error occurs during processing, appropriate HTTP responses are returned.
+        /// </returns>
+        /// <summary>
+        /// Retrieves the history of prepared recipes and makes predictions for the next year.
+        /// </summary>
+        /// <remarks>
+        /// This endpoint retrieves the history of prepared recipes, including details such as the amount prepared and the date of preparation.
+        /// Additionally, it uses an ML.NET model to predict the amount that will be prepared in the next year based on historical data.
+        /// </remarks>
+        /// <returns>
+        /// Returns a list of prepared recipes along with their predicted amounts for the next year.
+        /// If there is no history available or any error occurs during processing, appropriate HTTP responses are returned.
+        /// </returns>
+        [HttpGet("prediction-consume")]
+        [Authorize]
+        public async Task<ActionResult> GetPredictionConsumeAsync()
+        {
+            try
+            {
+
+                var preparedRecipesWithPredictions = await _RecipeService.GetPreparedRecipesWithPredictions();
+                return Ok(preparedRecipesWithPredictions);
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = RECIPE.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Retrieves the maximum number of times a Recipe can be prepared based on available ingredients.
         /// </summary>
         /// <param name="id">The identifier of the Recipe to calculate the amount for.</param>

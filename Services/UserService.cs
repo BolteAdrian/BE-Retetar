@@ -381,11 +381,11 @@ namespace Retetar.Services
                var userRoles = _userManager.GetRolesAsync(user).Result; // Fetch roles synchronously for simplicity
 
                 var claims = new List<Claim>
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
 
                 //Add user roles as claims
                 claims.AddRange(userRoles.Select(role => new Claim("role", role)));
@@ -438,7 +438,7 @@ namespace Retetar.Services
         {
             try
             {
-                return $"<a href=\"https://{_configuration["Frontend:HostName"]}/api/User/reset-password/{email}/{resetPasswordToken}\">Reset Password</a>";
+                return $"<a href=\"http://{_configuration["Frontend:HostName"]}/reset-password/{email}/{resetPasswordToken}\">Reset Password</a>";
             }
             catch (Exception ex)
             {
