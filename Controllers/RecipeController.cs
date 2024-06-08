@@ -299,7 +299,7 @@ namespace Retetar.Controllers
                 _RecipeService.AddRecipe(recipe);
 
                 // Return the created recipe's details
-                return CreatedAtAction(nameof(GetRecipeDetails), new { id = recipe.Recipe.Id }, new { status = StatusCodes.Status201Created, recipe });
+                return CreatedAtAction(nameof(GetRecipeDetails), new { id = recipe.Recipe.Id }, new { status = StatusCodes.Status201Created });
             }
             catch (Exception ex)
             {
