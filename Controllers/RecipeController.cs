@@ -232,7 +232,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpPost("{id}/submit-amount")]
-        [Authorize]
+        [Authorize(Policy = "ManagerOnly")]
         public IActionResult SubmitRecipeQuantity(int id, [FromBody] int quantity)
         {
             try
@@ -242,28 +242,21 @@ namespace Retetar.Controllers
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_ID });
                 }
 
-                var (available, missingQuantity, missingIngredient) = _RecipeService.SubmitRecipeQuantity(id, quantity);
+                var (available, missingIngredients) = _RecipeService.SubmitRecipeQuantity(id, quantity);
 
                 if (available)
                 {
-                    return Ok(new { status = StatusCodes.Status200OK, message = "Quantity available for the recipe." });
+                    return Ok(new { status = StatusCodes.Status200OK, message = RECIPE.QUANTITY_AVAILABLE });
                 }
                 else
                 {
-                    var missingIngredientsMessage = "Not enough quantity available for the recipe. Missing:";
-                    for (int i = 0; i < missingIngredient.Count(); i++)
-                    {
-                        missingIngredientsMessage += $" {missingQuantity[i]} {missingIngredient[i]}";
-                        if (i < missingIngredient.Count() - 1)
-                        {
-                            missingIngredientsMessage += ",";
-                        }
-                    }
+                    var missingIngredientsMessage = RECIPE.QUANTITY_UNAVAILABLE;
 
                     return Ok(new
                     {
                         status = StatusCodes.Status400BadRequest,
-                        message = missingIngredientsMessage
+                        message = missingIngredientsMessage,
+                        missingIngredients
                     });
                 }
             }

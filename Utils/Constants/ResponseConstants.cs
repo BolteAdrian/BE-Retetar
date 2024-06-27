@@ -1,4 +1,6 @@
-﻿namespace Retetar.Utils.Constants
+﻿using static Retetar.Utils.Constants.ResponseConstants;
+
+namespace Retetar.Utils.Constants
 {
     public class ResponseConstants
     {
@@ -15,15 +17,29 @@
             public const string ERROR_DELETING = "Could not delete the Ingredient!";
             public const string SUCCESS_UPDATING = "Ingredient updated successfully!";
             public const string SUCCESS_DELETING = "Ingredient deleted successfully!";
+            public const string SUCCESS_CREATING = "Ingredient created successfully!";
+        }
+        public static class QUANTITY
+        {
+            public const string NOT_FOUND = "Quantity was not found!";
+            public const string NOT_SAVED = "Could not save the Quantity!";
+            public const string ERROR_UPDATING = "Could not update the Quantity!";
+            public const string ERROR_DELETING = "Could not delete the Quantity!";
+            public const string SUCCESS_UPDATING = "Quantity updated successfully!";
+            public const string SUCCESS_DELETING = "Quantity deleted successfully!";
+            public const string SUCCESS_CREATING = "Quantity created successfully!";
         }
 
         public static class RECIPE
         {
             public const string NOT_FOUND = "Recipe not found!";
+            public const string QUANTITY_AVAILABLE = "Quantity available for the recipe";
+            public const string QUANTITY_UNAVAILABLE = "Not enough quantity available for the recipe";
             public const string NOT_SAVED = "Could not save the Recipe!";
             public const string ERROR_UPDATING = "Could not update the Recipe!";
             public const string ERROR_DELETING = "Could not delete the Recipe!";
             public const string SUCCESS_UPDATING = "Recipe updated successfully!";
+            public const string SUCCESS_CREATING = "Recipe created successfully!";
             public const string SUCCESS_DELETING = "Recipe deleted successfully!";
             public const string ERROR_GETTING_HISTORY = "Could not get the prepared recipes history!";
         }
@@ -35,6 +51,7 @@
             public const string ERROR_UPDATING = "Could not update the Category!";
             public const string ERROR_DELETING = "Could not delete the Category!";
             public const string SUCCESS_UPDATING = "Category updated successfully!";
+            public const string SUCCESS_CREATING = "Category created successfully!";
             public const string SUCCESS_DELETING = "Category deleted successfully!";
         }
 

@@ -283,7 +283,7 @@ namespace Retetar.Migrations
                     Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ExpiringDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DateOfPurchase = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Used = table.Column<bool>(type: "bit", nullable: false),
+                    UsedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IngredientId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>

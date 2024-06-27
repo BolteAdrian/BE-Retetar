@@ -255,7 +255,7 @@ namespace Retetar.Controllers
         /// <summary>
         /// Logs in a user.
         /// </summary>
-        /// <param name="model">The login information provided by the user.</param>
+        /// <param name="input">The login information provided by the user.</param>
         /// <returns>
         /// Returns a response indicating the result of the login process.
         /// If successful, returns a success login message.
@@ -264,16 +264,16 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a 500 Internal Server Error response with an error message.
         /// </returns>
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserAuthDto model)
+        public async Task<IActionResult> Login([FromBody] UserAuthDto input)
         {
             try
             {
-                if (model == null)
+                if (input == null)
                 {
                     return BadRequest(new { status = StatusCodes.Status400BadRequest, message = INVALID_DATA });
                 }
 
-                var result = await _userService.LoginUserAsync(model.Email, model.Password);
+                var result = await _userService.LoginUserAsync(input.Email, input.Password);
 
                 if (result != null)
                 {

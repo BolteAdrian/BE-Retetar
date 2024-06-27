@@ -27,17 +27,13 @@ namespace Retetar.Services
         {
             try
             {
-                IQueryable<Ingredient> query = _dbContext.Ingredient
-               .Include(i => i.Category); // Include Category navigation property
+                IQueryable<Ingredient> query = _dbContext.Ingredient;
 
                 // Apply search filters
-                if (!string.IsNullOrEmpty(options.SearchTerm) && options.SearchFields != null)
+                if (!string.IsNullOrEmpty(options.SearchTerm))
                 {
                     string searchTermLower = options.SearchTerm.ToLower();
-                    query = query.Where(g =>
-                        options.SearchFields.Any(f => g.Name.ToLower().Contains(searchTermLower) ||
-                                                      g.Category!.Name.ToLower().Contains(searchTermLower))
-                    );
+                    query = query.Where(g => g.Name.ToLower().Contains(searchTermLower));
                 }
 
                 // Sorting
@@ -80,8 +76,6 @@ namespace Retetar.Services
             {
                 case "name":
                     return isAscending ? query.OrderBy(g => g.Name) : query.OrderByDescending(g => g.Name);
-                case "category":
-                    return isAscending ? query.OrderBy(g => g.Category!.Name) : query.OrderByDescending(g => g.Name);
                 default:
                     return query; // If the sorting field does not exist or is not specified, return the unchanged query
             }
@@ -114,23 +108,68 @@ namespace Retetar.Services
         }
 
         /// <summary>
-        /// Retrieves a list of all Ingredients by category.
+        /// Retrieves a list of all used Ingredients.
         /// </summary>
-        /// <param name="id">The unique identifier of the Category.</param>
         /// <returns>
-        /// Returns a list of Ingredients if successful.
+        /// Returns a list of used Ingredients if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public IQueryable<Ingredient> GetAllIngredientsByCategory(int id)
+        public async Task<List<UsedIngredientQuantityDto>> GetAllUsedIngredients()
         {
             try
             {
-                IQueryable<Ingredient> ingredients = _dbContext.Ingredient.Where(i => i.CategoryId == id);
+                var usedIngredients = await _dbContext.IngredientQuantities
+                .Where(q => q.UsedDate != null)
+                .Select(q => new UsedIngredientQuantityDto
+                {
+                    IngredientName = q.Ingredient.Name,
+                    Quantity = q
+                })
+                .ToListAsync();
 
-                if (ingredients == null)
+                return usedIngredients;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format(INGREDIENT.NOT_FOUND), ex);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients by category and includes stock status information.
+        /// </summary>
+        /// <param name="id">The unique identifier of the Category.</param>
+        /// <returns>
+        /// Returns a list of IngredientWithStock objects if successful, including stock status.
+        /// - StockEmpty is true if there are no quantities with Amount > 0.
+        /// - StockExpired is true if any quantity has an ExpiringDate earlier than today.
+        /// - StockAlmostExpired is true if any quantity has an ExpiringDate within the next 7 days.
+        /// If an error occurs during processing, throws an exception with an error message.
+        /// </returns>
+        public IQueryable<IngredientWithStock> GetAllIngredientsByCategory(int id)
+        {
+            try
+            {
+                var ingredients = from ingredient in _dbContext.Ingredient
+                                  where ingredient.CategoryId == id
+                                  select new IngredientWithStock
+                                  {
+                                      Id = ingredient.Id,
+                                      Name = ingredient.Name,
+                                      Description = ingredient.Description,
+                                      Picture = ingredient.Picture,
+                                      CategoryId = ingredient.CategoryId,
+                                      Category = ingredient.Category,
+                                      StockEmpty = !_dbContext.IngredientQuantities.Any(iq => iq.IngredientId == ingredient.Id && iq.Amount > 0),
+                                      StockExpired = _dbContext.IngredientQuantities.Any(iq => iq.IngredientId == ingredient.Id && iq.ExpiringDate < DateTime.Now),
+                                      StockAlmostExpired = _dbContext.IngredientQuantities.Any(iq => iq.IngredientId == ingredient.Id && iq.ExpiringDate >= DateTime.Now && iq.ExpiringDate <= DateTime.Now.AddDays(7))
+                                  };
+
+                if (ingredients == null || !ingredients.Any())
                 {
                     throw new Exception(string.Format(INGREDIENT.NOT_FOUND));
                 }
+
                 return ingredients;
             }
             catch (Exception ex)

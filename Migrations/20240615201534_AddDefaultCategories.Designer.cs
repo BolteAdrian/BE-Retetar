@@ -12,8 +12,8 @@ using Retetar.Repository;
 namespace Retetar.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20240514195849_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20240615201534_AddDefaultCategories")]
+    partial class AddDefaultCategories
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -243,8 +243,8 @@ namespace Retetar.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("Used")
-                        .HasColumnType("bit");
+                    b.Property<DateTime?>("UsedDate")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

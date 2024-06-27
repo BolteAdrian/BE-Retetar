@@ -23,16 +23,16 @@ namespace Retetar.Services
         /// Returns a paginated list of IngredientQuantitiess if successful.
         /// If an error occurs during processing, throws an exception with an error message.
         /// </returns>
-        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(QuantitiesSearchOptionsDto options)
+        public List<IngredientQuantities> GetAllIngredientQuantitiesPaginated(PaginationAndSearchOptionsDto options)
         {
             try
             {
-                IQueryable<IngredientQuantities> query = _dbContext.IngredientQuantities.AsQueryable().Where(q=> q.Used == options.Used);
+                IQueryable<IngredientQuantities> query = _dbContext.IngredientQuantities.AsQueryable().Where(q=> q.UsedDate ==null);
 
                 // Sorting
                 if (!string.IsNullOrEmpty(options.SortField))
                 {
-                    // In this example, we'll use the SortOrder enum to decide whether sorting is done in ascending or descending order
+                    // We'll use the SortOrder enum to decide whether sorting is done in ascending or descending order
                     bool isAscending = options.SortOrder == SortOrder.Ascending;
                     query = SortQuery(query, options.SortField, isAscending);
                 }
@@ -92,7 +92,7 @@ namespace Retetar.Services
             try
             {
                 var ingredientQuantities = await _dbContext.IngredientQuantities
-                    .Where(g => g.IngredientId == id && g.Used == false)
+                    .Where(g => g.IngredientId == id && g.UsedDate == null)
                     .ToListAsync();
 
                 if (ingredientQuantities == null || ingredientQuantities.Count == 0)

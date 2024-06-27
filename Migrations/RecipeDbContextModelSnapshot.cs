@@ -240,8 +240,8 @@ namespace Retetar.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("Used")
-                        .HasColumnType("bit");
+                    b.Property<DateTime?>("UsedDate")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

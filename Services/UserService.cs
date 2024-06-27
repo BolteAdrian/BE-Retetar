@@ -165,29 +165,43 @@ namespace Retetar.Services
         /// <summary>
         /// Authenticates a user asynchronously based on provided credentials.
         /// </summary>
-        /// <param name="email">The email of the user.</param>
+        /// <param name="usernameOrEmail">The email or username of the user.</param>
         /// <param name="password">The password of the user.</param>
         /// <returns>The result of the user authentication process.</returns>
         /// <exception cref="Exception">Thrown when there is an error during user authentication.</exception>
-        public async Task<JwtAutResponseDto> LoginUserAsync(string email, string password)
+        public async Task<JwtAutResponseDto> LoginUserAsync(string usernameOrEmail, string password)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByNameAsync(usernameOrEmail);
+
+            // Check first by username
             if (user == null)
-                throw new Exception(string.Format(USER.NOT_FOUND));
+            {
+                // If it doesn't find it by username, try to find it by email
+                user = await _userManager.FindByEmailAsync(usernameOrEmail);
+                if (user == null)
+                {
+                    throw new Exception(string.Format(USER.NOT_FOUND));
+                }
+            }
+
+            // Check password
             if (!await _userManager.CheckPasswordAsync(user, password))
+            {
                 throw new Exception(string.Format(USER.NOT_FOUND));
+            }
 
             var userRoles = await _userManager.GetRolesAsync(user);
             var authClaims = new List<Claim>
             {
-               new Claim(ClaimTypes.Name, user.UserName),
-               new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
             foreach (var userRole in userRoles)
             {
                 authClaims.Add(new Claim(ClaimTypes.Role, userRole));
             }
+
             string token = GenerateToken(authClaims);
 
             return new JwtAutResponseDto

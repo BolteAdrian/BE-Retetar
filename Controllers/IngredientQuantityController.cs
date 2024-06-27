@@ -29,7 +29,7 @@ namespace Retetar.Controllers
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
         [HttpGet]
-        public IActionResult GetAllIngredientQuantitiesPaginated([FromBody] QuantitiesSearchOptionsDto options)
+        public IActionResult GetAllIngredientQuantitiesPaginated([FromBody] PaginationAndSearchOptionsDto options)
         {
             try
             {
@@ -41,12 +41,12 @@ namespace Retetar.Controllers
                 }
                 else
                 {
-                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = QUANTITY.NOT_FOUND });
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.NOT_FOUND, error = ex.Message });
             }
         }
 
@@ -78,12 +78,12 @@ namespace Retetar.Controllers
                 }
                 else
                 {
-                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = QUANTITY.NOT_FOUND });
                 }
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.NOT_FOUND, error = ex.Message });
             }
         }
 
@@ -153,7 +153,7 @@ namespace Retetar.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_SAVED, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.NOT_SAVED, error = ex.Message });
             }
         }
 
@@ -182,12 +182,11 @@ namespace Retetar.Controllers
 
                 _IngredientQuantitiesService.ImportIngredientQuantities(ingredientQuantities);
 
-                // Choose an appropriate way to provide an HTTP response, such as returning OK.
-                return Ok();
+                return CreatedAtAction(nameof(GetIngredientQuantitiesById), new { message = QUANTITY.SUCCESS_CREATING }, ingredientQuantities);
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_SAVED, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.NOT_SAVED, error = ex.Message });
             }
         }
 
@@ -225,11 +224,11 @@ namespace Retetar.Controllers
 
                 _IngredientQuantitiesService.UpdateIngredientQuantities(id, ingredientQuantities);
 
-                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_UPDATING });
+                return Ok(new { status = StatusCodes.Status200OK, message = QUANTITY.SUCCESS_UPDATING });
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.ERROR_UPDATING, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.ERROR_UPDATING, error = ex.Message });
             }
         }
 
@@ -258,12 +257,12 @@ namespace Retetar.Controllers
                 }
 
                 _IngredientQuantitiesService.DeleteIngredientQuantities(id);
-                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_DELETING });
+                return Ok(new { status = StatusCodes.Status200OK, message = QUANTITY.SUCCESS_DELETING });
 
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.ERROR_DELETING, error = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = QUANTITY.ERROR_DELETING, error = ex.Message });
             }
         }
     }

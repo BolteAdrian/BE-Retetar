@@ -41,4 +41,16 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup Label="MLModel_RecipeApp">
+    <None Include="MLModel_RecipeApp.consumption.cs">
+      <DependentUpon>MLModel_RecipeApp.mbconfig</DependentUpon>
+    </None>
+    <None Include="MLModel_RecipeApp.training.cs">
+      <DependentUpon>MLModel_RecipeApp.mbconfig</DependentUpon>
+    </None>
+    <None Include="MLModel_RecipeApp.zip">
+      <DependentUpon>MLModel_RecipeApp.mbconfig</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

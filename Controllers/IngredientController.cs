@@ -40,7 +40,7 @@ namespace Retetar.Controllers
                 {
                     return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
                 }
-                return Ok(new { status = StatusCodes.Status200OK, ingredients });
+                return Ok(new { status = StatusCodes.Status200OK, data = ingredients });
             }
             catch (Exception ex)
             {
@@ -77,11 +77,42 @@ namespace Retetar.Controllers
         }
 
         /// <summary>
-        /// Retrieves a list of all Ingredients by category.
+        /// Retrieves a list of all used Ingredients.
+        /// </summary>
+        /// <returns>
+        /// Returns a list of used Ingredients if successful.
+        /// If no Ingredients are found, returns a NotFound response with an appropriate message.
+        /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
+        /// </returns>
+        [HttpGet("used")]
+        [Authorize]
+        public IActionResult GetAllUsedIngredients()
+        {
+            try
+            {
+                var ingredients = _IngredientService.GetAllUsedIngredients();
+
+                if (ingredients == null)
+                {
+                    return NotFound(new { status = StatusCodes.Status404NotFound, message = INGREDIENT.NOT_FOUND });
+                }
+                return Ok(new { status = StatusCodes.Status200OK, ingredients });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = INGREDIENT.NOT_FOUND, error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a list of all Ingredients by category, including stock status information.
         /// </summary>
         /// <param name="id">The unique identifier of the category.</param>
         /// <returns>
-        /// Returns a list of Ingredients if successful.
+        /// Returns a list of IngredientWithStock objects if successful, including stock status:
+        /// - StockEmpty is true if there are no quantities with Amount > 0.
+        /// - StockExpired is true if any quantity has an ExpiringDate earlier than today.
+        /// - StockAlmostExpired is true if any quantity has an ExpiringDate within the next 7 days.
         /// If no Ingredients are found, returns a NotFound response with an appropriate message.
         /// If an error occurs during processing, returns a StatusCode 500 response with an error message.
         /// </returns>
@@ -209,7 +240,7 @@ namespace Retetar.Controllers
 
                 _IngredientService.UpdateIngredient(id, ingredient);
 
-                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_UPDATING });
+                return Ok(new { status = StatusCodes.Status200OK, message = INGREDIENT.SUCCESS_UPDATING, ingredient });
             }
             catch (Exception ex)
             {

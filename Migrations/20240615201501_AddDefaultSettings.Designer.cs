@@ -12,7 +12,7 @@ using Retetar.Repository;
 namespace Retetar.Migrations
 {
     [DbContext(typeof(RecipeDbContext))]
-    [Migration("20240404201308_AddDefaultSettings")]
+    [Migration("20240615201501_AddDefaultSettings")]
     partial class AddDefaultSettings
     {
         /// <inheritdoc />
@@ -243,8 +243,8 @@ namespace Retetar.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("Used")
-                        .HasColumnType("bit");
+                    b.Property<DateTime?>("UsedDate")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -263,6 +263,9 @@ namespace Retetar.Migrations
 
                     b.Property<int>("Amount")
                         .HasColumnType("int");
+
+                    b.Property<DateTime>("PreparationDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("RecipeId")
                         .HasColumnType("int");
