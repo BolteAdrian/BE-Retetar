@@ -208,7 +208,8 @@ namespace Retetar.Services
             {
                 Token = token,
                 UserName = user.UserName,
-                UserId = user.Id
+                UserId = user.Id,
+                UserRole = userRoles.First()
             };
         }
 
