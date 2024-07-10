@@ -257,31 +257,31 @@ namespace Retetar.Services
         {
             try
             {
-                // Obțineți anul curent
+                // Get the current year
                 int currentYear = DateTime.Now.Year;
 
-                // Obține datele istorice din baza de date
+                // Get the historical data from the database
                 var preparedRecipes = await _dbContext.PreparedRecipeHistory
                     .Include(r => r.Recipe)
                     .Select(r => new
                     {
-                        Id = r.Id,
-                        Amount = r.Amount,
-                        RecipeId = r.RecipeId,
+                        r.Id,
+                        r.Amount,
+                        r.RecipeId,
                         RecipeName = r.Recipe.Name,
                         PreparationDate = new DateTime(currentYear, r.PreparationDate.Month, r.PreparationDate.Day)
                     })
                     .ToListAsync();
 
-                // Generați predicții pentru anul următor
+                // Generate predictions for the next year
                 var predictedData = preparedRecipes.Select(data => new
                 {
                     data.Id,
                     data.Amount,
                     data.RecipeId,
-                    RecipeName = data.RecipeName,
+                    data.RecipeName,
                     data.PreparationDate,
-                    PredictedAmount = MLModel.Predict(new ModelInput
+                    PredictedAmount = Predict(new ModelInput
                     {
                         Id = data.Id,
                         Amount = data.Amount,
@@ -299,85 +299,188 @@ namespace Retetar.Services
         }
 
         /// <summary>
-        /// Calculates the maximum number of times a Recipe can be prepared based on available ingredients and their quantities.
+        /// Calculates the maximum number of recipes that can be prepared based on available ingredient quantities.
+        /// Also calculates the total cost of ingredients required for the calculated maximum recipes.
         /// </summary>
-        /// <param name="recipeId">The identifier of the Recipe to calculate the amount for.</param>
-        /// <remarks>
-        /// This method computes the maximum number of times the specified Recipe can be prepared
-        /// considering the availability and quantity of required ingredients in the inventory.
-        /// </remarks>
+        /// <param name="recipeId">The ID of the recipe for which to calculate the maximum possible recipes.</param>
         /// <returns>
-        /// Returns an object containing information about the Recipe amount including:
-        /// - MaximumPossibleRecipes: The maximum number of times the Recipe can be prepared with available ingredients.
-        /// - PriceAllRecipes: The total price of all recipes that can be prepared with available ingredients.
-        /// - PriceUnitRecipe: The average price per recipe considering the available ingredients.
-        /// Returns 0 if any ingredient is unavailable or expired.
+        /// A DTO containing:
+        ///   - MaximumPossibleRecipes (int): The maximum number of recipes that can be prepared.
+        ///   - PriceAllRecipes (double): The total cost of all ingredients required for the maximum possible recipes.
+        ///   - PriceUnitRecipe (double): The cost per unit recipe based on the calculated maximum possible recipes.
         /// </returns>
+        /// <exception cref="Exception">Thrown when the specified recipe ID does not exist in the database or an error occurs during the calculation.</exception>
         public async Task<RecipeAmountDto> GetRecipeAmount(int recipeId)
         {
             try
             {
+                // Fetch the recipe by ID
                 var recipe = await _dbContext.Recipe.FirstOrDefaultAsync(r => r.Id == recipeId);
                 if (recipe == null)
                 {
                     throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId));
                 }
 
+                // Fetch the ingredients associated with the recipe
                 var recipeIngredients = await _dbContext.RecipeIngredients
                     .Where(ri => ri.RecipeId == recipeId)
                     .ToListAsync();
 
+                // Extract ingredient IDs from the recipe ingredients
                 var ingredientIds = recipeIngredients.Select(ri => ri.IngredientId).ToList();
 
-                var ingredientQuantities = await _dbContext.IngredientQuantities
+                // Fetch the available quantities for the ingredients
+                var availableIngredientQuantities = await _dbContext.IngredientQuantities
                     .Where(iq => ingredientIds.Contains(iq.IngredientId) && iq.UsedDate == null && iq.ExpiringDate > DateTime.Now)
                     .ToListAsync();
 
-                int maximumPossibleRecipes = int.MaxValue;
-                double totalIngredientsPrice = 0;
-
+                double totalIngredientsCost = 0;
+                double minTotalAmount = double.MaxValue;
                 var currencyConverter = new CurrencyConverter();
 
+                // Calculate the minimum total amount for each ingredient
                 foreach (var recipeIngredient in recipeIngredients)
                 {
-                    var relevantQuantities = ingredientQuantities.Where(iq => iq.IngredientId == recipeIngredient.IngredientId).ToList();
+                    var relevantIngredientQuantities = availableIngredientQuantities
+                        .Where(iq => iq.IngredientId == recipeIngredient.IngredientId)
+                        .ToList();
 
-                    double totalIngredientQuantity = 0;
-                    double totalIngredientPrice = 0;
-
-                    foreach (var ingredientQuantity in relevantQuantities)
-                    {
-                        double quantityInStandardUnit = ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml"
-                            ? ingredientQuantity.Amount / 1000
-                            : ingredientQuantity.Amount;
-
-                        totalIngredientQuantity += quantityInStandardUnit;
-
-                        double ingredientPriceInCurrency = ingredientQuantity.Currency == "RON"
-                            ? ingredientQuantity.Price
-                            : await currencyConverter.ConvertCurrency(ingredientQuantity.Price, ingredientQuantity.Currency);
-
-                        totalIngredientPrice += ingredientPriceInCurrency;
-                    }
-
-                    double recipeIngredientQuantityInStandardUnit = recipeIngredient.Unit == "g" || recipeIngredient.Unit == "ml"
+                    // Convert recipe ingredient quantity to standard unit if needed
+                    double recipeIngredientQuantityStandardUnit =
+                        recipeIngredient.Unit == "g" || recipeIngredient.Unit == "ml"
                         ? recipeIngredient.Quantity / 1000
                         : recipeIngredient.Quantity;
 
-                    int possibleRecipesWithIngredient = (int)(totalIngredientQuantity / recipeIngredientQuantityInStandardUnit);
-                    maximumPossibleRecipes = Math.Min(maximumPossibleRecipes, possibleRecipesWithIngredient);
-
-                    if (maximumPossibleRecipes != 0)
+                    double totalQuantityForIngredient = 0;
+                    foreach (var ingredientQuantity in relevantIngredientQuantities)
                     {
-                        totalIngredientsPrice += totalIngredientPrice;
+                        totalQuantityForIngredient += ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml"
+                            ? ingredientQuantity.Amount / 1000
+                            : ingredientQuantity.Amount;
                     }
+
+                    totalQuantityForIngredient = (int)totalQuantityForIngredient / recipeIngredientQuantityStandardUnit;
+
+                    // Update the minimum total amount based on the current ingredient
+                    minTotalAmount = Math.Min(minTotalAmount, totalQuantityForIngredient);
                 }
 
+                foreach (var recipeIngredient in recipeIngredients)
+                {
+                    var relevantIngredientQuantities = availableIngredientQuantities
+                        .Where(iq => iq.IngredientId == recipeIngredient.IngredientId)
+                        .ToList();
+
+                    double ingredientTotalCost = 0;
+                    double remainingQuantity = 0;
+                    double remainingCost = 0;
+                    double possibleRecipesForIngredient = 0;
+
+                    // Convert recipe ingredient quantity to standard unit if needed
+                    double recipeIngredientQuantityStandardUnit =
+                        recipeIngredient.Unit == "g" || recipeIngredient.Unit == "ml"
+                        ? recipeIngredient.Quantity / 1000
+                        : recipeIngredient.Quantity;
+
+                    // Calculate the possible number of recipes that can be made with the available quantities
+                    foreach (var ingredientQuantity in relevantIngredientQuantities)
+                    {
+                        double ingredientQuantityStandardUnit =
+                            ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml"
+                            ? ingredientQuantity.Amount / 1000
+                            : ingredientQuantity.Amount;
+
+                        double ingredientPriceInTargetCurrency = ingredientQuantity.Currency == "RON"
+                            ? ingredientQuantity.Price
+                            : await currencyConverter.ConvertCurrency(ingredientQuantity.Price, ingredientQuantity.Currency);
+
+
+                        ingredientQuantityStandardUnit += remainingQuantity; // Add the remaining quantity from the previous iteration
+
+                        // Check if the total quantity exceeds minTotalAmount
+                        if (possibleRecipesForIngredient == minTotalAmount)
+                        {
+                            break;
+                        }
+
+                        if (recipeIngredientQuantityStandardUnit == ingredientQuantityStandardUnit)
+                        {
+                            possibleRecipesForIngredient += 1;
+                            ingredientTotalCost += ingredientPriceInTargetCurrency * (ingredientQuantityStandardUnit - remainingQuantity);
+                            ingredientTotalCost += remainingCost;
+                            remainingQuantity = 0;
+                            remainingCost = 0;
+                        }
+                        else if (recipeIngredientQuantityStandardUnit < ingredientQuantityStandardUnit)
+                        {
+                            int completeRecipes = (int)(ingredientQuantityStandardUnit / recipeIngredientQuantityStandardUnit);
+
+                            // Calculate the total possible recipes if we add the complete recipes from this iteration
+                            double newPossibleRecipesForIngredient = possibleRecipesForIngredient + completeRecipes;
+
+                            if (newPossibleRecipesForIngredient >= minTotalAmount)
+                            {
+                                // Adjust completeRecipes so that possibleRecipesForIngredient doesn't exceed minTotalAmount
+                                completeRecipes = (int)(minTotalAmount - possibleRecipesForIngredient);
+
+                                // Update the number of possible recipes
+                                possibleRecipesForIngredient += completeRecipes;
+
+                                // Calculate the leftover quantity after making the adjusted number of complete recipes
+                                double leftoverQuantity = ingredientQuantityStandardUnit - (recipeIngredientQuantityStandardUnit * completeRecipes);
+
+                                // Calculate the cost for the adjusted number of complete recipes
+                                ingredientTotalCost += ingredientPriceInTargetCurrency * (recipeIngredientQuantityStandardUnit * completeRecipes);
+
+                                // Add the remaining cost from the previous iteration
+                                ingredientTotalCost += remainingCost;
+                                remainingCost = 0;
+
+                                // Update the remaining quantity and cost
+                                remainingQuantity = leftoverQuantity;
+                                remainingCost = leftoverQuantity * ingredientPriceInTargetCurrency;
+
+                                // Break out of the loop as we've reached the maximum possible recipes
+                                break;
+                            }
+                            else
+                            {
+                                // Update the number of possible recipes
+                                possibleRecipesForIngredient = newPossibleRecipesForIngredient;
+
+                                // Calculate the leftover quantity after making the complete recipes
+                                double leftoverQuantity = ingredientQuantityStandardUnit - (recipeIngredientQuantityStandardUnit * completeRecipes);
+
+                                // Calculate the cost for the complete recipes
+                                ingredientTotalCost += ingredientPriceInTargetCurrency * (recipeIngredientQuantityStandardUnit * completeRecipes);
+
+                                // Add the remaining cost from the previous iteration
+                                ingredientTotalCost += remainingCost;
+                                remainingCost = 0;
+
+                                // Update the remaining quantity and cost
+                                remainingQuantity = leftoverQuantity;
+                                remainingCost = leftoverQuantity * ingredientPriceInTargetCurrency;
+                            }
+                        }
+                        else
+                        {
+                            remainingQuantity += ingredientQuantityStandardUnit;
+                            remainingCost += ingredientQuantityStandardUnit * ingredientPriceInTargetCurrency;
+                        }
+
+                    }
+
+                     totalIngredientsCost += ingredientTotalCost;
+                    
+                }
+
+                // Return the calculated recipe amount DTO
                 return new RecipeAmountDto
                 {
-                    MaximumPossibleRecipes = recipeIngredients.Count() == 0 ? 0: maximumPossibleRecipes,
-                    PriceAllRecipes = maximumPossibleRecipes != 0 ? Math.Round(totalIngredientsPrice, 2) : 0,
-                    PriceUnitRecipe = maximumPossibleRecipes != 0 ? Math.Round(totalIngredientsPrice / maximumPossibleRecipes, 2) : 0
+                    MaximumPossibleRecipes = (int)(recipeIngredients.Count == 0 ? 0 : minTotalAmount),
+                    PriceAllRecipes = minTotalAmount != 0 ? Math.Round(totalIngredientsCost, 2) : 0,
+                    PriceUnitRecipe = minTotalAmount != 0 ? Math.Round(totalIngredientsCost / minTotalAmount, 2) : 0
                 };
             }
             catch (Exception ex)
@@ -395,77 +498,76 @@ namespace Retetar.Services
         /// <returns>
         /// A tuple containing information:
         ///   - First value (bool): Indicates if the requested quantity can be prepared.
-        ///   - Second value (double): The actual available quantity of the ingredient required for the recipe.
-        ///   - Third value (string): Name of the ingredient that is insufficient in quantity, if any.
+        ///   - Second value (List<MissingIngredientsDto>): List of ingredients that are insufficient in quantity, if any.
         /// </returns>
         /// <exception cref="Exception">Thrown when an error occurs during the quantity check process.</exception>
-        public (bool, List<MissingIngredientsDto>) SubmitRecipeQuantity(int recipeId, int cantitateDorita)
+        public (bool canPrepare, List<MissingIngredientsDto> missingIngredients) SubmitRecipeQuantity(int recipeId, int desiredQuantity)
         {
             try
             {
+                // Fetch the recipe from the database using the recipeId
                 var recipe = _dbContext.Recipe.FirstOrDefault(r => r.Id == recipeId);
 
+                // Throw an exception if the recipe is not found
                 if (recipe == null)
                 {
                     throw new Exception(string.Format(RECIPE.NOT_FOUND, recipeId));
                 }
 
+                // Get all ingredients associated with the recipe
                 var recipeIngredients = _dbContext.RecipeIngredients.Where(ri => ri.RecipeId == recipeId).ToList();
 
+                // List to track ingredients that are insufficient
                 var missingIngredients = new List<MissingIngredientsDto>();
 
                 foreach (var recipeIngredient in recipeIngredients)
                 {
-                    // We convert the desired quantity into kilograms or liters, depending on the unit of measure specified for the ingredient
-                    double cantitateDeRedus;
+                    // Convert the desired quantity into kilograms or liters based on the unit of measure
+                    double quantityToReduce;
                     switch (recipeIngredient.Unit.ToLower())
                     {
                         case "g":
                         case "ml":
-                            cantitateDeRedus = (recipeIngredient.Quantity / 1000) * cantitateDorita; // Converting quantity to standard unit if necessary
+                            quantityToReduce = (recipeIngredient.Quantity / 1000) * desiredQuantity; // Convert to standard unit if necessary
                             break;
                         default:
-                            cantitateDeRedus = recipeIngredient.Quantity * cantitateDorita;
+                            quantityToReduce = recipeIngredient.Quantity * desiredQuantity;
                             break;
                     }
 
+                    // Fetch available ingredient quantities from the database
                     var ingredientQuantities = _dbContext.IngredientQuantities
                         .Where(iq => iq.IngredientId == recipeIngredient.IngredientId && iq.ExpiringDate > DateTime.Now && iq.UsedDate == null)
-                        .OrderBy(iq => iq.Id) // Sort by ID to reduce oldest available
+                        .OrderBy(iq => iq.Id) // Sort by ID to use the oldest available quantities first
                         .ToList();
 
-                    // We calculate the total amount of available quantities, taking into account the unit of measure
-                    double totalIngredientQuantity = 0;
+                    // Calculate the total available quantity of the ingredient
+                    double totalAvailableQuantity = 0;
                     foreach (var ingredientQuantity in ingredientQuantities)
                     {
-                        // We convert the available quantity into the same unit as the desired quantity
-                        double availableAmountInDefaultUnit = ingredientQuantity.Amount;
+                        // Convert available quantity to the same unit as the desired quantity
+                        double availableAmountInStandardUnit = ingredientQuantity.Amount;
                         switch (ingredientQuantity.Unit.ToLower())
                         {
                             case "g":
-                                availableAmountInDefaultUnit /= 1000; // We convert grams to kilograms
+                                availableAmountInStandardUnit /= 1000; // Convert grams to kilograms
                                 break;
                             case "ml":
-                                availableAmountInDefaultUnit /= 1000; // Convert milliliters to liters
+                                availableAmountInStandardUnit /= 1000; // Convert milliliters to liters
                                 break;
                         }
-                        totalIngredientQuantity += availableAmountInDefaultUnit;
+                        totalAvailableQuantity += availableAmountInStandardUnit;
                     }
 
+                    // Determine the unit of measure
                     var unit = ingredientQuantities.FirstOrDefault()?.Unit ?? "";
-                    var cantitateMaxima = (int)(totalIngredientQuantity / cantitateDeRedus);
+                    var maxQuantity = (int)(totalAvailableQuantity / quantityToReduce);
 
-                    if(unit == "g")
-                    {
-                        unit = "Kg";
-                    }
+                    if (unit == "g") unit = "Kg";
+                    if (unit == "ml") unit = "L";
 
-                    if (unit == "ml")
-                    {
-                        unit = "L";
-                    }
-
-                    if (totalIngredientQuantity == 0)
+                    // Check if the ingredient is completely missing or insufficient
+                    if (totalAvailableQuantity == 0)
                     {
                         var ingredient = _dbContext.Ingredient.FirstOrDefault(r => r.Id == recipeIngredient.IngredientId);
                         if (ingredient != null)
@@ -473,12 +575,12 @@ namespace Retetar.Services
                             missingIngredients.Add(new MissingIngredientsDto
                             {
                                 Unit = unit,
-                                Quantity = Math.Round(cantitateDeRedus, 2),
+                                Quantity = Math.Round(quantityToReduce, 2),
                                 Name = ingredient.Name
                             });
                         }
                     }
-                    else if (cantitateMaxima < cantitateDorita)
+                    else if (maxQuantity < desiredQuantity)
                     {
                         var ingredient = _dbContext.Ingredient.FirstOrDefault(r => r.Id == recipeIngredient.IngredientId);
                         if (ingredient != null)
@@ -486,51 +588,69 @@ namespace Retetar.Services
                             missingIngredients.Add(new MissingIngredientsDto
                             {
                                 Unit = unit,
-                                Quantity = Math.Round(cantitateDeRedus - totalIngredientQuantity, 2),
+                                Quantity = Math.Round(quantityToReduce - totalAvailableQuantity, 2),
                                 Name = ingredient.Name
                             });
                         }
                     }
                     else
                     {
-
-                        // Updates the available quantities of ingredients in the database
+                        // Update the ingredient quantities in the database
                         foreach (var ingredientQuantity in ingredientQuantities)
                         {
-                            if (cantitateDeRedus > 0 && ingredientQuantity.Amount > 0)
+                            if (quantityToReduce > 0 && ingredientQuantity.Amount > 0)
                             {
+                                double ingredientQuantityStandardUnit =
+                                    ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml"
+                                    ? ingredientQuantity.Amount / 1000
+                                    : ingredientQuantity.Amount;
 
-                                if (cantitateDeRedus > ingredientQuantity.Amount)
+                                if (quantityToReduce > ingredientQuantityStandardUnit)
                                 {
-                                    cantitateDeRedus -= ingredientQuantity.Amount;
+                                    quantityToReduce -= ingredientQuantityStandardUnit;
                                     ingredientQuantity.UsedDate = DateTime.Now;
                                     _dbContext.IngredientQuantities.Update(ingredientQuantity);
                                 }
                                 else
                                 {
-                                    ingredientQuantity.Amount -= cantitateDeRedus;
-                                    cantitateDeRedus = 0;
-                                    if (ingredientQuantity.Amount == 0)
+                                    ingredientQuantityStandardUnit -= quantityToReduce;
+
+                                    if (ingredientQuantityStandardUnit == 0)
                                     {
                                         ingredientQuantity.UsedDate = DateTime.Now;
                                         _dbContext.IngredientQuantities.Update(ingredientQuantity);
                                     }
                                     else
                                     {
+                                        ingredientQuantity.Amount = Math.Round(ingredientQuantityStandardUnit); // The amount remaining in stock
                                         _dbContext.IngredientQuantities.Update(ingredientQuantity);
-                                    }
-                                }
 
+                                        _dbContext.IngredientQuantities.Add(new IngredientQuantities // The amount used
+                                        {
+                                            Amount = Math.Round(quantityToReduce),
+                                            ExpiringDate = ingredientQuantity.ExpiringDate,
+                                            Unit = ingredientQuantity.Unit,
+                                            DateOfPurchase = ingredientQuantity.DateOfPurchase,
+                                            Price = ingredientQuantity.Price,
+                                            Currency = ingredientQuantity.Currency,
+                                            UsedDate = DateTime.Now,
+                                            IngredientId = ingredientQuantity.IngredientId
+                                        });
+                                    }
+
+                                    quantityToReduce = 0;
+                                }
                             }
                         }
                     }
                 }
 
-                if (missingIngredients.Count() == 0 )
+                // If there are no missing ingredients, record the prepared recipe in the history
+                if (missingIngredients.Count() == 0)
                 {
                     PreparedRecipeHistory preparedRecipe = new PreparedRecipeHistory
                     {
-                        Amount = cantitateDorita,
+                        Amount = desiredQuantity,
                         RecipeId = recipeId,
                         PreparationDate = DateTime.Now
                     };
@@ -538,7 +658,8 @@ namespace Retetar.Services
                     _dbContext.SaveChanges();
                 }
 
-                return ((missingIngredients.Count() == 0 ? true : false), missingIngredients);
+                // Return the result indicating if the recipe can be prepared and the list of missing ingredients
+                return (missingIngredients.Count() == 0, missingIngredients);
             }
             catch (Exception ex)
             {
