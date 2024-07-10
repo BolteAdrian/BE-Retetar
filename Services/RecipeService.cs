@@ -520,6 +520,35 @@ namespace Retetar.Services
                 // List to track ingredients that are insufficient
                 var missingIngredients = new List<MissingIngredientsDto>();
 
+                double maxQuantity = double.MaxValue;
+                // Calculate the minimum total amount for each ingredient
+                foreach (var recipeIngredient in recipeIngredients)
+                {
+                    var relevantIngredientQuantities = _dbContext.IngredientQuantities
+                        .Where(iq => iq.IngredientId == recipeIngredient.IngredientId && iq.ExpiringDate > DateTime.Now && iq.UsedDate == null)
+                        .OrderBy(iq => iq.Id) // Sort by ID to use the oldest available quantities first
+                        .ToList();
+
+                    // Convert recipe ingredient quantity to standard unit if needed
+                    double recipeIngredientQuantityStandardUnit =
+                        recipeIngredient.Unit == "g" || recipeIngredient.Unit == "ml"
+                        ? recipeIngredient.Quantity / 1000
+                        : recipeIngredient.Quantity;
+
+                    double totalQuantityForIngredient = 0;
+                    foreach (var ingredientQuantity in relevantIngredientQuantities)
+                    {
+                        totalQuantityForIngredient += ingredientQuantity.Unit == "g" || ingredientQuantity.Unit == "ml"
+                            ? ingredientQuantity.Amount / 1000
+                            : ingredientQuantity.Amount;
+                    }
+
+                    totalQuantityForIngredient = (int)totalQuantityForIngredient / recipeIngredientQuantityStandardUnit;
+
+                    // Update the minimum total amount based on the current ingredient
+                    maxQuantity = Math.Min(maxQuantity, totalQuantityForIngredient);
+                }
+
                 foreach (var recipeIngredient in recipeIngredients)
                 {
                     // Convert the desired quantity into kilograms or liters based on the unit of measure
@@ -561,7 +590,6 @@ namespace Retetar.Services
 
                     // Determine the unit of measure
                     var unit = ingredientQuantities.FirstOrDefault()?.Unit ?? "";
-                    var maxQuantity = (int)(totalAvailableQuantity / quantityToReduce);
 
                     if (unit == "g") unit = "Kg";
                     if (unit == "ml") unit = "L";
@@ -585,12 +613,14 @@ namespace Retetar.Services
                         var ingredient = _dbContext.Ingredient.FirstOrDefault(r => r.Id == recipeIngredient.IngredientId);
                         if (ingredient != null)
                         {
+                            if (quantityToReduce - totalAvailableQuantity > 0) { 
                             missingIngredients.Add(new MissingIngredientsDto
                             {
                                 Unit = unit,
                                 Quantity = Math.Round(quantityToReduce - totalAvailableQuantity, 2),
                                 Name = ingredient.Name
                             });
+                            }
                         }
                     }
                     else
