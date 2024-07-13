@@ -1,4 +1,4 @@
-Backend for a to do list with .net 6 with 3-tier arhitecture and Angular 14 for frontend FE link : 
+Backend for Culinary Manager and Inventory application with .net 6 with 3-tier arhitecture and Angular 14 for frontend FE link : 
 https://github.com/BolteAdrian/FE-Retetar
 
 In the Culinary Manager and Inventory application, we opted for the use of a relational database, specifically Microsoft SQL Server. 
